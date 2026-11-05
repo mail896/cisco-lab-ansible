@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+inventory.ini
+local-private/
+*.deb
+*.key
+*.log
+*.pem

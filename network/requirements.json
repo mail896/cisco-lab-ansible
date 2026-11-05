@@ -1,0 +1,39 @@
+{
+  "status": "implemented-local-tests-only",
+  "allowed_test_host": "LAB-08A",
+  "comparison_host": "LAB-08B",
+  "school": {
+    "profile": "LAN-Schule",
+    "ipv4": "auto",
+    "ipv6": "disabled",
+    "default_route": true,
+    "wol": "magic",
+    "student_editable": false
+  },
+  "lab": {
+    "profile": "LAN-Labor",
+    "dhcp": false,
+    "default_route": false,
+    "reset_on_student_login": true,
+    "preserve_exercise_during_session": true,
+    "student_editable": true
+  },
+  "heal": {
+    "interval_seconds": 30,
+    "single_timer": true,
+    "restore_deleted_lab_profile": true
+  },
+  "deployment_blocked_until": [
+    "per-host_manifest_reviewed",
+    "physical_IServ_and_polkit_acceptance",
+    "hardware_DHCP_WOL_and_rollback_acceptance"
+  ],
+  "authorization": {
+    "student_group": "lab.students",
+    "source": "IServ Samba AD",
+    "native_nm_mutation": "deny",
+    "editor": "dedicated laboratory dialog",
+    "target_identity": "root-owned manifest",
+    "broker": "implemented AF_UNIX SO_PEERCRED + logind"
+  }
+}

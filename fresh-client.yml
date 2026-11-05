@@ -1,0 +1,230 @@
+---
+- name: Geprüfte CISCO-LAB-Basis auf einem frisch installierten Einzelclient einrichten
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  vars_files:
+    - tasks/settings-vars.yml
+  vars:
+    ansible_connection: ssh
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_host_key_checking: true
+    ansible_ssh_use_tty: false
+    ansible_pipelining: true
+    lab_fresh_known_hosts: "{{ lookup('ansible.builtin.env', 'HOME') + '/.ssh/known_hosts' }}"
+    ansible_ssh_common_args: >-
+      -F /dev/null -o StrictHostKeyChecking=yes -o ConnectTimeout=8
+      -o UserKnownHostsFile={{ lab_fresh_known_hosts | quote }}
+    lab_settings_test_accounts:
+      - {name: "{{ lab_fresh_student }}", allowed: 'no'}
+      - {name: administrator, allowed: 'yes'}
+    lab_desktop_launchers:
+      - applications:cisco-lab-network.desktop
+      - preferred://filemanager
+      - applications:firefox-esr.desktop
+      - applications:packettracer.desktop
+      - applications:example.unterrichtszeit.desktop
+      - applications:org.kde.konsole.desktop
+      - applications:putty.desktop
+      - applications:cisco-console.desktop
+      - applications:wireshark-lab.desktop
+    lab_fresh_packettracer_sha256: dd9ac0d4c7fc37dcb68f627fd7c7e6fa6d4200c14492526e5618b9bd172ed920
+    lab_fresh_packettracer_app_sha256: 3efe3bfb1b01b252ad3ee4c88d5ba48d6f3711fde94b724bd26cc1a4d3cab477
+    lab_fresh_veyon_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+
+  tasks:
+    - name: Ein ausdrücklich benanntes frisches Gerät und alle Eingaben verlangen
+      ansible.builtin.assert:
+        that:
+          - lab_fresh_confirmed | default(false) | bool
+          - not ansible_check_mode
+          - ansible_play_hosts_all | length == 1
+          - inventory_hostname == (lab_fresh_host | default(''))
+          - >-
+            inventory_hostname != 'LAB-08B' or
+            ((lab_fresh_rebuild_08b | default(false) | bool) and
+             ansible_host == '192.0.2.16' and
+             lab_fresh_known_hosts != lookup('ansible.builtin.env', 'HOME') + '/.ssh/known_hosts')
+          - inventory_hostname is match('^LAB-0[1-8][AB]$')
+          - ansible_host is match('^192\.0\.2\.([1-9]|1[0-6])$')
+          - (lab_network_manifest.host | default('')) == inventory_hostname
+          - (lab_network_manifest.version | default(0)) == 1
+          - (lab_network_manifest.group | default('')) == 'lab.students'
+          - (lab_fresh_student | default('')) is match('^[a-zA-Z0-9_.-]+$')
+          - (lab_fresh_packettracer_deb | default('')) is match('^/')
+          - (lab_fresh_veyon_public_key | default('')) is match('^/')
+        fail_msg: >-
+          Installation nur auf einem explizit bestätigten Einzelclient mit
+          geprüftem Netzwerkmanifest, Testkonto und lokalen Paketdateien.
+          Für die lokale Planung --syntax-check oder --list-tasks verwenden.
+
+    - name: Lokale Installationsartefakte vor SSH prüfen
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+        follow: false
+        checksum_algorithm: sha256
+      loop:
+        - {path: "{{ lab_fresh_packettracer_deb }}", sha256: "{{ lab_fresh_packettracer_sha256 }}"}
+        - {path: "{{ lab_fresh_veyon_public_key }}", sha256: "{{ lab_fresh_veyon_sha256 }}"}
+      delegate_to: localhost
+      become: false
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+      register: lab_fresh_artifacts
+
+    - name: Ausschließlich bekannte Paket- und Schlüsselinhalte zulassen
+      ansible.builtin.assert:
+        that:
+          - item.stat.isreg | default(false)
+          - item.stat.checksum | default('') == item.item.sha256
+      loop: "{{ lab_fresh_artifacts.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+
+    - name: Gruppenmitgliedschaft, Hostidentität und freie lokale Konsole prüfen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            import grp, json, os, pwd, socket, subprocess, sys
+            from pathlib import Path
+
+            host, address, mac, student = sys.argv[1:]
+            if socket.gethostname() != host:
+                raise SystemExit('Hostname stimmt nicht mit dem Manifest überein.')
+            release = dict(line.strip().split('=', 1) for line in
+                           Path('/etc/os-release').read_text().splitlines() if '=' in line)
+            if (release.get('ID'), release.get('VERSION_ID', '').strip('"')) != ('debian', '13'):
+                raise SystemExit('Erwartet wird Debian 13.')
+            interfaces = json.loads(subprocess.check_output(['/usr/sbin/ip', '-j', 'addr']))
+            if not any(row.get('address', '').lower() == mac.lower() and
+                       any(ip['local'] == address for ip in row.get('addr_info', []))
+                       for row in interfaces):
+                raise SystemExit('Schul-IP und verifizierte Schul-MAC passen nicht zusammen.')
+            group = grp.getgrnam('lab.students').gr_gid
+            for name, expected in ((student, True), ('administrator', False)):
+                user = pwd.getpwnam(name)
+                if group <= 0 or user.pw_uid == 0 or (group in os.getgrouplist(name, user.pw_gid)) != expected:
+                    raise SystemExit(f'Unerwartete LAB-Gruppenzuordnung für {name}.')
+            sessions = subprocess.check_output(['loginctl', 'list-sessions', '--no-legend'], text=True)
+            for line in sessions.splitlines():
+                result = subprocess.check_output(['loginctl', 'show-session', line.split()[0],
+                                                  '-p', 'Type', '-p', 'Class', '-p', 'Remote'], text=True)
+                fields = dict(row.split('=', 1) for row in result.splitlines() if '=' in row)
+                interactive = fields.get('Type') in ('x11', 'wayland') or (
+                    fields.get('Type') == 'tty' and fields.get('Remote') == 'no')
+                if interactive and fields.get('Class', '').startswith('user'):
+                    raise SystemExit('Lokale Sitzung vorhanden. Erst regulär abmelden.')
+            print(group)
+          - "{{ inventory_hostname }}"
+          - "{{ ansible_host }}"
+          - "{{ lab_network_manifest.identity.school.mac }}"
+          - "{{ lab_fresh_student }}"
+      register: lab_fresh_preflight
+      changed_when: false
+
+    - name: LAB-Gruppen-ID für Systemsteuerung und Mitschnitt festhalten
+      ansible.builtin.set_fact:
+        lab_settings_gid: "{{ lab_fresh_preflight.stdout | int }}"
+
+    - name: Paketübergreifende Konfiguration vor der ersten Änderung sichern
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            import json, sys
+            from pathlib import Path
+
+            source = {{ lookup('ansible.builtin.file', playbook_dir + '/roles/lab_desktop/files/snapshot.py') | to_json }}
+            scope = {'__name__': 'fresh_install_snapshot'}
+            exec(source, scope)
+            backup = Path(scope['snapshot'](json.load(sys.stdin), '/var/backups/cisco-lab/fresh'))
+            (backup / 'restore.py').write_text(source + '\n')
+            (backup / 'restore.py').chmod(0o600)
+            print(backup)
+        stdin: >-
+          {{ ['/usr/share/applications/packettracer.desktop',
+              '/usr/share/applications/wireshark-lab.desktop',
+              '/usr/local/lib/cisco-lab/extcap/cisco-lab-usb',
+              '/etc/systemd/system/cisco-lab-capture.socket',
+              '/etc/systemd/system/cisco-lab-capture@.service',
+              '/etc/systemd/system/sockets.target.wants/cisco-lab-capture.socket',
+              '/etc/xdg/Veyon Solutions/Veyon.conf',
+              '/etc/veyon/keys/public/teacher/key',
+              '/etc/systemd/system/multi-user.target.wants/veyon.service'] | to_json }}
+      register: lab_fresh_snapshot
+
+    - name: Quellen dieser Installationsfolge für den Rückweg sichern
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/{{ item }}"
+        dest: "{{ lab_fresh_snapshot.stdout }}/{{ item | basename }}"
+        owner: root
+        group: root
+        mode: '0600'
+      loop:
+        - fresh-client.yml
+        - tasks/fresh/packettracer.yml
+        - tasks/fresh/capture.yml
+        - tasks/fresh/veyon.yml
+
+    - name: Grundpakete und Paketvoraussetzungen bereitstellen
+      ansible.builtin.apt:
+        name:
+          - acl
+          - desktop-file-utils
+          - firefox-esr
+          - iproute2
+          - libcap2-bin
+          - libnm0
+          - net-tools
+          - nmap
+          - python3-pyqt5
+          - traceroute
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Schul- und Laboranschluss trennen
+      ansible.builtin.import_role:
+        name: lab_network
+
+    - name: Serielle Konsole und Gerätezugriff installieren
+      ansible.builtin.import_role:
+        name: lab_serial
+
+    - name: Geprüftes Packet-Tracer-Paket und Starter installieren
+      ansible.builtin.import_tasks: tasks/fresh/packettracer.yml
+
+    - name: Ausschließlich den USB-Labormitschnitt bereitstellen
+      ansible.builtin.import_tasks: tasks/fresh/capture.yml
+
+    - name: KDE-Sitzung und SDDM konfigurieren
+      ansible.builtin.import_role:
+        name: lab_session
+
+    - name: Desktop, Schnellstart und U-Zeiten installieren
+      ansible.builtin.import_role:
+        name: lab_desktop
+
+    - name: Allgemeine KDE-Systemsteuerung für LAB-Schüler sperren
+      ansible.builtin.import_tasks: tasks/settings-access.yml
+
+    - name: Firefox-Unterrichtsvorgaben installieren
+      ansible.builtin.import_role:
+        name: lab_firefox
+
+    - name: Veyon-Client mit geprüftem öffentlichem Lehrerschlüssel einrichten
+      ansible.builtin.import_tasks: tasks/fresh/veyon.yml
+
+    - name: Erstlogin und Freigabe als getrennte Abnahme ausweisen
+      ansible.builtin.debug:
+        msg: >-
+          Installation abgeschlossen. Vor Unterrichtsbetrieb Neustart und IServ-Erstlogin,
+          Schulroute, Laborprofil, KDE-Sperren, Konsolen, U-Zeiten, Wireshark,
+          Firefox-Download, Packet-Tracer-Start und Veyon praktisch prüfen.
+          Übergreifende Dateisicherung: {{ lab_fresh_snapshot.stdout }}.

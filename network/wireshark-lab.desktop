@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Wireshark LAB
+Comment=USB-Labornetz in Wireshark auswählen
+Exec=/usr/bin/env WIRESHARK_EXTCAP_DIR=/usr/local/lib/cisco-lab/extcap /usr/bin/wireshark -i cisco-lab-usb
+Icon=org.wireshark.Wireshark
+Terminal=false
+Categories=Network;Education;

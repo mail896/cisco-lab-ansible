@@ -1,0 +1,38 @@
+---
+- name: Debian-SDDM-Themepfad feststellen
+  ansible.builtin.command:
+    argv: [/usr/bin/readlink, -e, /usr/share/sddm/themes/debian-theme]
+  register: lab_greeter_theme
+  changed_when: false
+  check_mode: false
+
+- name: Geprüftes Debian-Breeze-Theme voraussetzen
+  ansible.builtin.assert:
+    that: lab_greeter_theme.stdout == '/usr/share/sddm/themes/debian-breeze'
+
+- name: Bekanntes LAB-Anmeldebild installieren
+  ansible.builtin.copy:
+    src: "{{ lab_greeter_image_source | default(playbook_dir + '/files/network.jpg') }}"
+    dest: /usr/share/backgrounds/cisco-lab-login.jpg
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+
+- name: LAB-Bild über die lokale SDDM-Theme-Konfiguration setzen
+  community.general.ini_file:
+    path: /usr/share/sddm/themes/debian-breeze/theme.conf.user
+    section: General
+    option: background
+    value: /usr/share/backgrounds/cisco-lab-login.jpg
+    no_extra_spaces: true
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+
+- name: Lesbarkeit für den SDDM-Anmeldebildschirm prüfen
+  ansible.builtin.command:
+    argv: [/usr/sbin/runuser, -u, sddm, --, /usr/bin/test, -r, /usr/share/backgrounds/cisco-lab-login.jpg]
+  changed_when: false
+  when: not ansible_check_mode

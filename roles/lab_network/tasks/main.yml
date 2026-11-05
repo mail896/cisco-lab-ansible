@@ -1,0 +1,47 @@
+---
+- name: Netzwerk-Quellen gebündelt übertragen und installieren
+  block:
+    - name: Temporäres Netzwerk-Archiv auf LAB-Teacher vorbereiten
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .tar.gz
+      delegate_to: localhost
+      become: false
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+      register: lab_network_source_archive
+      when: not ansible_check_mode
+
+    - name: Netzwerk-Quellstand einmal lokal bündeln
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/tar
+          - -C
+          - "{{ playbook_dir }}"
+          - --exclude=__pycache__
+          - --exclude=*.pyc
+          - -czf
+          - "{{ lab_network_source_archive.path }}"
+          - network
+      delegate_to: localhost
+      become: false
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+      when: not ansible_check_mode
+
+    - name: Netzwerk-Vermittler mit geprüftem Manifest einrichten
+      ansible.builtin.import_tasks: install.yml
+
+  always:
+    - name: Lokales Netzwerk-Archiv nach dem Lauf entfernen
+      ansible.builtin.file:
+        path: "{{ lab_network_source_archive.path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+      when: lab_network_source_archive.path is defined

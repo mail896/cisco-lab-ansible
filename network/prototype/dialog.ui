@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>LabNetworkDialog</class>
+ <widget class="QDialog" name="LabNetworkDialog">
+  <property name="windowTitle"><string>Labornetz einstellen – Entwurf</string></property>
+  <layout class="QVBoxLayout" name="layout">
+   <item><widget class="QLabel" name="scope"><property name="text"><string>Nur USB-Labornetz. Das IServ-Schulnetz bleibt geschützt.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+   <item><widget class="QLabel" name="addressLabel"><property name="text"><string>Manuelle IPv4-/IPv6-Adressen mit Präfix, eine je Zeile:</string></property></widget></item>
+   <item><widget class="QPlainTextEdit" name="addresses"><property name="placeholderText"><string>192.168.0.6/29
+2001:db8:192::6/64</string></property></widget></item>
+   <item><widget class="QLabel" name="routeLabel"><property name="text"><string>Gezielte Routen: Zielnetz über Routeradresse, eine je Zeile:</string></property></widget></item>
+   <item><widget class="QPlainTextEdit" name="routes"><property name="placeholderText"><string>172.16.0.0/29 via 192.168.0.1
+2001:db8:172::/64 via fe80::1</string></property></widget></item>
+   <item><widget class="QLabel" name="note"><property name="text"><string>Kein DHCP. Die Default-Route bleibt im Schulnetz.</string></property></widget></item>
+   <item><widget class="QPushButton" name="preview"><property name="text"><string>Eingaben prüfen</string></property></widget></item>
+   <item><widget class="QPushButton" name="apply"><property name="enabled"><bool>false</bool></property><property name="text"><string>Übernehmen – erst nach Freigabe des Testdienstes verfügbar</string></property></widget></item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

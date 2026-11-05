@@ -1,0 +1,316 @@
+---
+- name: Explizite Hostzuordnung verlangen
+  ansible.builtin.assert:
+    that:
+      - lab_network_manifest.host | default('') == inventory_hostname
+      - lab_network_manifest.group | default('') == 'lab.students'
+      - lab_network_manifest.version | default(0) == 1
+    fail_msg: Kein geprueftes Hostmanifest vorhanden. Niemals Adapter/UUIDs erraten.
+
+- name: IServ-Gruppe aufloesen
+  ansible.builtin.getent:
+    database: group
+    key: lab.students
+
+- name: Root-Gruppe ausschliessen
+  ansible.builtin.assert:
+    that: ansible_facts.getent_group['lab.students'][1] | int > 0
+
+- name: Rootgeschuetzten temporaeren Pruefpfad bereitstellen
+  ansible.builtin.file:
+    path: /run/cisco-lab-network-stage
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Read-only Vorpruefung vorbereiten und ausfuehren
+  block:
+    - name: Gebündelten Quellstand für die Vorprüfung bereitstellen
+      ansible.builtin.unarchive:
+        src: "{{ lab_network_source_archive.path }}"
+        dest: /run/cisco-lab-network-stage/
+        owner: root
+        group: root
+      when: not ansible_check_mode
+
+    - name: Hostmanifest fuer Vorpruefung bereitstellen
+      ansible.builtin.copy:
+        dest: /run/cisco-lab-network-stage/network.json
+        content: "{{ lab_network_manifest | to_nice_json }}\n"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Hardware, Profile, Routen, Sitzungen, Regelvorrang und libnm pruefen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -I
+          - /run/cisco-lab-network-stage/network/broker/preflight.py
+          - /run/cisco-lab-network-stage/network.json
+      register: lab_network_preflight
+      changed_when: false
+      when: not ansible_check_mode
+
+    - name: Gepruefte Profilpfade festhalten
+      ansible.builtin.set_fact:
+        lab_network_verified: "{{ lab_network_preflight.stdout | from_json }}"
+      when: not ansible_check_mode
+  always:
+    - name: Temporaeren Pruefpfad entfernen
+      ansible.builtin.file:
+        path: /run/cisco-lab-network-stage
+        state: absent
+
+- name: Weitere Testmigration nur nach vollstaendiger Vorpruefung
+  when: not ansible_check_mode
+  block:
+    - name: Dateizustaende vor erster wirksamer Aenderung sichern
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', role_path + '/files/snapshot.py') }}"
+        stdin: >-
+          {{ {'paths': ([
+          '/etc/cisco-lab/network.json',
+          '/etc/polkit-1/rules.d/49-networkmanager-cisco.rules',
+          '/etc/polkit-1/rules.d/10-cisco-lab-network.rules',
+          '/etc/NetworkManager/conf.d/30-cisco-lab-devices.conf',
+          '/etc/systemd/system/cisco-lab-network.service',
+          '/etc/systemd/system/multi-user.target.wants/cisco-lab-network.service',
+          '/etc/systemd/system/timers.target.wants/lab-network-heal.timer',
+          '/etc/systemd/system/timers.target.wants/lab-school-network-heal.timer',
+          '/usr/share/applications/cisco-lab-network.desktop',
+          '/var/lib/cisco-lab-network/last-request.json',
+          '/var/lib/cisco-lab-network/sessions.json',
+          '/var/lib/cisco-lab-network/health.json'] +
+          [lab_network_verified.profile_paths.school, lab_network_verified.profile_paths.lab]),
+          'source_files': (lookup('ansible.builtin.file', playbook_dir + '/network/package-files.json') | from_json)} | to_json }}
+      register: lab_block05_snapshot
+      changed_when: true
+
+    - name: Vorherige Dienstzustaende lesen
+      ansible.builtin.command:
+        argv: [systemctl, show, "{{ item }}", '-p', LoadState, '-p', ActiveState, '-p', UnitFileState]
+      loop: [lab-network-heal.timer, lab-school-network-heal.timer, lab-network-heal.service, lab-school-network-heal.service, cisco-lab-network.service]
+      register: lab_network_old_units
+      changed_when: false
+
+    - name: Dienstzustaende fuer Rueckweg sichern
+      ansible.builtin.copy:
+        dest: "{{ lab_block05_snapshot.stdout }}/units.json"
+        content: "{{ lab_network_old_units.results | to_nice_json }}\n"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Geprueftes Manifest fuer Rueckweg sichern
+      ansible.builtin.copy:
+        dest: "{{ lab_block05_snapshot.stdout }}/settings.json"
+        content: "{{ {'manifest': lab_network_manifest, 'verified': lab_network_verified} | to_nice_json }}\n"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Vollstaendigen Quellstand und Testeinstieg sichern
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ lab_block05_snapshot.stdout }}/source/{{ item.name }}"
+        owner: root
+        group: root
+        mode: preserve
+      loop:
+        - {src: "{{ role_path }}/", name: role/}
+        - {src: "{{ playbook_dir }}/block05-network.yml", name: block05-network.yml}
+
+    - name: Gebündelten Netzwerk-Quellstand für den Rückweg ablegen
+      ansible.builtin.unarchive:
+        src: "{{ lab_network_source_archive.path }}"
+        dest: "{{ lab_block05_snapshot.stdout }}/source/"
+        owner: root
+        group: root
+
+    - name: Werkzeuge fuer Dienst und Dialog bereitstellen
+      ansible.builtin.apt:
+        name: [python3, python3-pyqt5, network-manager, libnm0, iproute2]
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Verwaltungsverzeichnisse bereitstellen
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      loop: [/var/backups/cisco-lab, /var/lib/cisco-lab-network]
+
+    - name: Gemeinsamen Konfigurationspfad fuer bestehende Benutzer-Hooks lesbar erhalten
+      ansible.builtin.file:
+        path: /etc/cisco-lab
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Lesbaren Programmpfad bereitstellen
+      ansible.builtin.file:
+        path: /usr/local/lib/cisco-lab
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Root-eigenen Programmstand gebündelt installieren
+      ansible.builtin.unarchive:
+        src: "{{ lab_network_source_archive.path }}"
+        dest: /usr/local/lib/cisco-lab/
+        owner: root
+        group: root
+
+    - name: Verifiziertes Hostmanifest installieren
+      ansible.builtin.copy:
+        dest: /etc/cisco-lab/network.json
+        content: "{{ lab_network_manifest | to_nice_json }}\n"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Vermittelnden Dienst und Dialogstarter bereitstellen
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - {src: "{{ playbook_dir }}/network/systemd/cisco-lab-network.service", dest: /etc/systemd/system/cisco-lab-network.service}
+        - {src: "{{ playbook_dir }}/network/dialog/cisco-lab-network.desktop", dest: /usr/share/applications/cisco-lab-network.desktop}
+
+    - name: Bisherige Heal-Timer nur falls vorhanden deaktivieren
+      ansible.builtin.systemd_service:
+        name: "{{ item.item }}"
+        state: stopped
+        enabled: false
+      loop: "{{ lab_network_old_units.results[0:2] }}"
+      when: "'LoadState=not-found' not in item.stdout"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Eventuell laufende alte Heal-Oneshots vor Uebergabe beenden
+      ansible.builtin.systemd_service:
+        name: "{{ item.item }}"
+        state: stopped
+      loop: "{{ lab_network_old_units.results[2:4] }}"
+      when: "'LoadState=not-found' not in item.stdout"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Namen des verifizierten Schulprofils lesen
+      ansible.builtin.command:
+        argv: [nmcli, -g, connection.id, connection, show, uuid, "{{ lab_network_manifest.identity.school.uuid }}"]
+      register: lab_network_school_name
+      changed_when: false
+
+    - name: Schulprofil eindeutig LAN-Schule nennen
+      ansible.builtin.command:
+        argv: [nmcli, connection, modify, uuid, "{{ lab_network_manifest.identity.school.uuid }}", connection.id, LAN-Schule]
+      when: lab_network_school_name.stdout != 'LAN-Schule'
+
+    - name: Einzelnen Vermittler mit Heal-Schleife starten
+      ansible.builtin.systemd_service:
+        name: cisco-lab-network.service
+        daemon_reload: true
+        enabled: true
+        state: restarted
+
+    - name: Root-Socket und Dienstbereitschaft abwarten
+      ansible.builtin.wait_for:
+        path: /run/cisco-lab-network/control.sock
+        state: present
+        timeout: 30
+
+    - name: Aktive Dienstbereitschaft pruefen
+      ansible.builtin.command: systemctl is-active cisco-lab-network.service
+      changed_when: false
+
+    - name: Altes Laborprofil für die Ersteinrichtung neutral setzen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            import sys
+            sys.path.insert(0, '/usr/local/lib/cisco-lab')
+            from network.broker.backend import Backend, CLEAR
+            from network.broker.service import load_config
+            Backend(load_config()['identity']).apply(CLEAR, 0)
+      when: lab_network_reset_on_deploy | default(false) | bool
+
+    - name: Tatsaechliche Vermittler- und Netzbereitschaft pruefen
+      ansible.builtin.command:
+        argv: [/usr/bin/python3, -I, /usr/local/lib/cisco-lab/network/broker/healthcheck.py]
+      register: lab_network_healthcheck
+      changed_when: false
+      retries: 6
+      delay: 5
+      until: lab_network_healthcheck.rc == 0
+
+    - name: Hardwaregebundene Profilfreigaben vorbereiten
+      ansible.builtin.template:
+        src: 30-cisco-lab-devices.conf.j2
+        dest: /etc/NetworkManager/conf.d/30-cisco-lab-devices.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: NM-Konfiguration ohne Daemon-Neustart neu lesen
+      ansible.builtin.command: nmcli general reload conf
+      changed_when: true
+
+    - name: Schreibsperre erst nach Dienstbereitschaft bereitstellen
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/network/security/10-cisco-lab-network.rules"
+        dest: /etc/polkit-1/rules.d/10-cisco-lab-network.rules
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Alte pauschale Freigabe nach Sicherung entfernen
+      ansible.builtin.file:
+        path: /etc/polkit-1/rules.d/49-networkmanager-cisco.rules
+        state: absent
+
+    - name: Physische Abnahme und Rueckweg melden
+      ansible.builtin.debug:
+        msg: >-
+          Testmigration vorbereitet; keine Benutzersitzung gestartet.
+          Vor Schuelerbetrieb explizite Deny-/Allow-Abnahme und Schulroute pruefen.
+          Sicherung {{ lab_block05_snapshot.stdout }}.
+
+  rescue:
+    - name: Verfuegbaren gesicherten Rueckweg feststellen
+      ansible.builtin.stat:
+        path: "{{ lab_block05_snapshot.stdout }}/source/network/broker/rollback.py"
+      register: lab_network_rollback_script
+      when: lab_block05_snapshot is defined and lab_block05_snapshot.stdout | default('') | length > 0
+
+    - name: Vorherigen Zustand bei fehlgeschlagener Migration wiederherstellen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -I
+          - "{{ lab_block05_snapshot.stdout }}/source/network/broker/rollback.py"
+          - "{{ lab_block05_snapshot.stdout }}"
+      when: lab_network_rollback_script.stat.exists | default(false)
+
+    - name: Fehlgeschlagene Migration deutlich melden
+      ansible.builtin.fail:
+        msg: >-
+          Netzwerk-Testmigration fehlgeschlagen. Rueckweg wurde ausgefuehrt,
+          soweit der vollstaendige Quellstand bereits gesichert war.
+          Vor weiterer Nutzung Dienstzustaende, Schulverbindung und Sicherung pruefen.

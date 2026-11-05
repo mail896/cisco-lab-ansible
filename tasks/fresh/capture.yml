@@ -1,0 +1,123 @@
+---
+- name: Schulroute und Netzwerk-Vermittler vor dem Mitschnitt prüfen
+  ansible.builtin.command:
+    argv: [/usr/bin/python3, -IB, /usr/local/lib/cisco-lab/network/broker/healthcheck.py]
+  changed_when: false
+
+- name: Direkte dumpcap-Rechte schon für die Paketinstallation abschalten
+  ansible.builtin.debconf:
+    name: wireshark-common
+    question: wireshark-common/install-setuid
+    vtype: boolean
+    value: 'false'
+
+- name: Wireshark installieren
+  ansible.builtin.apt:
+    name: wireshark
+    state: present
+
+- name: Umleitung von dumpcap ausschließen
+  ansible.builtin.command:
+    argv: [dpkg-divert, --truename, /usr/bin/dumpcap]
+  register: lab_fresh_dumpcap_path
+  changed_when: false
+  failed_when: lab_fresh_dumpcap_path.stdout != '/usr/bin/dumpcap'
+
+- name: Fremde dumpcap-Paket-Rechtevorgaben ausschließen
+  ansible.builtin.command:
+    argv: [dpkg-statoverride, --list, /usr/bin/dumpcap]
+  register: lab_fresh_dumpcap_override
+  changed_when: false
+  failed_when: lab_fresh_dumpcap_override.rc != 1 or lab_fresh_dumpcap_override.stdout | length != 0
+
+- name: Den installierten dumpcap-Dateityp prüfen
+  ansible.builtin.stat:
+    path: /usr/bin/dumpcap
+    follow: false
+    get_checksum: false
+  register: lab_fresh_dumpcap_file
+
+- name: Root-eigene reguläre dumpcap-Datei verlangen
+  ansible.builtin.assert:
+    that:
+      - lab_fresh_dumpcap_file.stat.isreg | default(false)
+      - lab_fresh_dumpcap_file.stat.uid == 0
+      - not lab_fresh_dumpcap_file.stat.wgrp
+      - not lab_fresh_dumpcap_file.stat.woth
+
+- name: Datei-Capabilities des Paketprogramms ermitteln
+  ansible.builtin.command:
+    argv: [/usr/sbin/getcap, /usr/bin/dumpcap]
+  register: lab_fresh_dumpcap_capabilities
+  changed_when: false
+
+- name: Eventuell vorhandene direkte Mitschnittrechte entziehen
+  ansible.builtin.command:
+    argv: [/usr/sbin/setcap, -r, /usr/bin/dumpcap]
+  when: lab_fresh_dumpcap_capabilities.stdout | length > 0
+
+- name: dumpcap ohne Setuid und ohne Sondergruppe bereitstellen
+  ansible.builtin.file:
+    path: /usr/bin/dumpcap
+    state: file
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Verzeichnis der Wireshark-Erweiterung vorbereiten
+  ansible.builtin.file:
+    path: /usr/local/lib/cisco-lab/extcap
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Geprüfte USB-Erweiterung und Dienste bereitstellen
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/network/{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - {src: capture_extcap.py, dest: /usr/local/lib/cisco-lab/extcap/cisco-lab-usb, mode: '0755'}
+    - {src: systemd/cisco-lab-capture@.service, dest: /etc/systemd/system/cisco-lab-capture@.service, mode: '0644'}
+
+- name: Socket mit der tatsächlich aufgelösten LAB-Gruppen-ID bereitstellen
+  ansible.builtin.copy:
+    content: "{{ lookup('ansible.builtin.file', playbook_dir + '/network/systemd/cisco-lab-capture.socket') | replace('root:lab.students', 'root:+' + (lab_settings_gid | string)) }}\n"
+    dest: /etc/systemd/system/cisco-lab-capture.socket
+    owner: root
+    group: root
+    mode: '0644'
+  register: lab_fresh_capture_socket_unit
+
+- name: LAB-Mitschnittdienst per Socket aktivieren
+  ansible.builtin.systemd_service:
+    name: cisco-lab-capture.socket
+    daemon_reload: true
+    enabled: true
+    state: "{{ 'restarted' if lab_fresh_capture_socket_unit.changed else 'started' }}"
+
+- name: Zugriff auf den LAB-Socket verifizieren
+  ansible.builtin.stat:
+    path: /run/cisco-lab-capture.sock
+    follow: false
+  register: lab_fresh_capture_socket
+
+- name: Root-eigenen und gruppenbeschränkten Socket verlangen
+  ansible.builtin.assert:
+    that:
+      - lab_fresh_capture_socket.stat.issock | default(false)
+      - lab_fresh_capture_socket.stat.uid == 0
+      - lab_fresh_capture_socket.stat.gid == (lab_settings_gid | int)
+      - lab_fresh_capture_socket.stat.mode == '0660'
+
+- name: Wireshark-Starter mit manueller USB-Aufnahme bereitstellen
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/network/wireshark-lab.desktop"
+    dest: /usr/share/applications/wireshark-lab.desktop
+    owner: root
+    group: root
+    mode: '0644'
+    validate: /usr/bin/desktop-file-validate %s

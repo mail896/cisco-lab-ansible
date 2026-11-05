@@ -1,0 +1,230 @@
+---
+- name: Einen frisch installierten LAB-Client für Ansible aufnehmen
+  hosts: cisco_lab
+  gather_facts: false
+  remote_user: administrator
+  become: true
+  vars:
+    ansible_connection: ssh
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_host_key_checking: true
+    ansible_ssh_use_tty: false
+    ansible_pipelining: true
+    lab_bootstrap_known_hosts: "{{ lookup('ansible.builtin.env', 'HOME') + '/.ssh/known_hosts' }}"
+    ansible_ssh_common_args: >-
+      -F /dev/null -o StrictHostKeyChecking=yes -o ConnectTimeout=8
+      -o UserKnownHostsFile={{ lab_bootstrap_known_hosts | quote }}
+    bootstrap_teacher_ip: 192.0.2.100
+    bootstrap_home: /home/administrator
+    bootstrap_ssh_dir: "{{ bootstrap_home }}/.ssh"
+    bootstrap_authorized_keys: "{{ bootstrap_ssh_dir }}/authorized_keys"
+    bootstrap_sudoers: /etc/sudoers.d/zz-cisco-lab-bootstrap
+    bootstrap_snapshot_source: "{{ lookup('ansible.builtin.file', playbook_dir + '/roles/lab_desktop/files/snapshot.py') }}"
+
+  tasks:
+    - name: Einen ausdrücklich ausgewählten Schüler-PC verlangen
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts_all | length == 1
+          - inventory_hostname == (lab_bootstrap_host | default(''))
+          - >-
+            inventory_hostname != 'LAB-08B' or
+            ((lab_bootstrap_rebuild_08b | default(false) | bool) and
+             ansible_host == '192.0.2.16' and
+             lab_bootstrap_known_hosts != lookup('ansible.builtin.env', 'HOME') + '/.ssh/known_hosts')
+          - inventory_hostname is match('^LAB-0[1-8][AB]$')
+          - ansible_host is match('^192\.0\.2\.([1-9]|1[0-6])$')
+          - (lab_bootstrap_school_mac | default('')) is match('^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$')
+          - (lab_bootstrap_identity_file | default('')) is match('^/')
+          - not ansible_check_mode
+
+    - name: Vorgesehenen privaten Schlüssel lokal prüfen
+      ansible.builtin.stat:
+        path: "{{ lab_bootstrap_identity_file }}"
+        follow: false
+        get_checksum: false
+      delegate_to: localhost
+      become: false
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+      register: bootstrap_identity
+
+    - name: Vorhandenen Schlüssel mit privaten Dateirechten verlangen
+      ansible.builtin.assert:
+        that:
+          - bootstrap_identity.stat.isreg | default(false)
+          - bootstrap_identity.stat.mode in ['0400', '0600']
+
+    - name: SSH-Public-Key für diesen Lauf auf LAB-Teacher lesen
+      ansible.builtin.set_fact:
+        bootstrap_key: "{{ lookup('ansible.builtin.file', lab_bootstrap_identity_file + '.pub').split()[:2] | join(' ') }}"
+
+    - name: Einen Ed25519-Public-Key verlangen
+      ansible.builtin.assert:
+        that: bootstrap_key is match('^ssh-ed25519 [A-Za-z0-9+/]+={0,2}$')
+
+    - name: Identität des Clients und sichere Dateipfade prüfen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            import json, os, socket, stat, subprocess, sys
+            from pathlib import Path
+
+            hostname, address, mac, home, sudoers = sys.argv[1:]
+            if socket.gethostname().split('.')[0].lower() != hostname.lower():
+                raise SystemExit('Hostname stimmt nicht mit dem Inventar überein.')
+            interfaces = json.loads(subprocess.check_output(['ip', '-j', 'address', 'show']))
+            if not any(
+                item.get('address', '').lower() == mac.lower()
+                and any(ip['local'] == address for ip in item.get('addr_info', []))
+                for item in interfaces
+            ):
+                raise SystemExit('Schul-IP und verifizierte MAC passen nicht zusammen.')
+
+            account = subprocess.check_output(
+                ['getent', '-s', 'files', 'passwd', 'administrator'], text=True
+            ).strip().split(':')
+            uid, gid = map(int, account[2:4])
+            if uid == 0 or account[5] != home:
+                raise SystemExit('Unerwartetes lokales Administratorkonto.')
+            ssh_dir = Path(home) / '.ssh'
+            for path, expected_type, owner in (
+                (Path(home), stat.S_ISDIR, uid),
+                (ssh_dir, stat.S_ISDIR, uid),
+                (ssh_dir / 'authorized_keys', stat.S_ISREG, uid),
+                (Path(sudoers).parent, stat.S_ISDIR, 0),
+                (Path(sudoers), stat.S_ISREG, 0),
+            ):
+                try:
+                    info = path.lstat()
+                except FileNotFoundError:
+                    if path in (Path(home), Path(sudoers).parent):
+                        raise
+                    continue
+                if not expected_type(info.st_mode) or info.st_uid != owner or info.st_mode & 0o022:
+                    raise SystemExit(f'Unerwarteter Dateityp, Eigentümer oder Modus: {path}')
+            print(json.dumps(dict(gid=gid, ssh_dir_exists=ssh_dir.is_dir())))
+          - "{{ inventory_hostname }}"
+          - "{{ ansible_host }}"
+          - "{{ lab_bootstrap_school_mac }}"
+          - "{{ bootstrap_home }}"
+          - "{{ bootstrap_sudoers }}"
+      changed_when: false
+      register: bootstrap_preflight
+
+    - name: Bestehende sudoers-Konfiguration vor jeder Änderung prüfen
+      ansible.builtin.command:
+        argv: [/usr/sbin/visudo, -c, -f, /etc/sudoers]
+      changed_when: false
+
+    - name: Betroffene Dateien und Rückweg sichern
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            from pathlib import Path
+            import sys
+
+            source = {{ bootstrap_snapshot_source | to_json }}
+            scope = {'__name__': 'bootstrap_snapshot'}
+            exec(source, scope)
+            backup = Path(scope['snapshot'](sys.argv[1:], '/var/backups/cisco-lab/bootstrap'))
+            (backup / 'restore.py').write_text(source + '\n')
+            (backup / 'restore.py').chmod(0o600)
+            print(backup)
+          - "{{ bootstrap_authorized_keys }}"
+          - "{{ bootstrap_sudoers }}"
+      register: bootstrap_backup
+
+    - name: Zugang einrichten und unabhängig verifizieren
+      block:
+        - name: SSH-Verzeichnis bei Bedarf anlegen
+          ansible.builtin.file:
+            path: "{{ bootstrap_ssh_dir }}"
+            state: directory
+            owner: administrator
+            group: "{{ (bootstrap_preflight.stdout | from_json).gid }}"
+            mode: '0700'
+          when: not (bootstrap_preflight.stdout | from_json).ssh_dir_exists
+
+        - name: Verwaltungsschlüssel ergänzen und auf LAB-Teacher beschränken
+          ansible.posix.authorized_key:
+            user: administrator
+            path: "{{ bootstrap_authorized_keys }}"
+            key: "{{ bootstrap_key }}"
+            key_options: 'restrict,from="{{ bootstrap_teacher_ip }}"'
+            exclusive: false
+            manage_dir: false
+
+        - name: Eigenes geprüftes sudoers-Fragment installieren
+          ansible.builtin.copy:
+            dest: "{{ bootstrap_sudoers }}"
+            owner: root
+            group: root
+            mode: '0440'
+            content: |
+              administrator ALL=(ALL:ALL) NOPASSWD: ALL
+            validate: '/usr/sbin/visudo -c -f %s'
+
+        - name: Gesamte sudoers-Konfiguration prüfen
+          ansible.builtin.command:
+            argv: [/usr/sbin/visudo, -c, -f, /etc/sudoers]
+          changed_when: false
+
+        - name: Neue SSH-Verbindung ausschließlich mit dem Verwaltungsschlüssel testen
+          ansible.builtin.command:
+            argv:
+              - /usr/bin/ssh
+              - -F
+              - /dev/null
+              - -S
+              - none
+              - -o
+              - StrictHostKeyChecking=yes
+              - -o
+              - BatchMode=yes
+              - -o
+              - "UserKnownHostsFile={{ lab_bootstrap_known_hosts }}"
+              - -o
+              - IdentitiesOnly=yes
+              - -o
+              - PreferredAuthentications=publickey
+              - -o
+              - ConnectTimeout=8
+              - -i
+              - "{{ lab_bootstrap_identity_file }}"
+              - "administrator@{{ ansible_host }}"
+              - /usr/bin/sudo -n /usr/bin/id -u
+          delegate_to: localhost
+          become: false
+          vars:
+            ansible_connection: local
+            ansible_python_interpreter: "{{ ansible_playbook_python }}"
+          register: bootstrap_connection
+          changed_when: false
+          failed_when: bootstrap_connection.rc != 0 or (bootstrap_connection.stdout | trim) != '0'
+
+      rescue:
+        - name: Vorherige Schlüssel und sudoers-Dateien wiederherstellen
+          ansible.builtin.command:
+            argv: [/usr/bin/python3, -IB, "{{ bootstrap_backup.stdout }}/restore.py", --restore, "{{ bootstrap_backup.stdout }}"]
+
+        - name: Neu angelegtes und leeres SSH-Verzeichnis entfernen
+          ansible.builtin.command:
+            argv: [/usr/bin/rmdir, --ignore-fail-on-non-empty, "{{ bootstrap_ssh_dir }}"]
+          when: not (bootstrap_preflight.stdout | from_json).ssh_dir_exists
+          failed_when: false
+
+        - name: Fehlgeschlagenen Bootstrap melden
+          ansible.builtin.fail:
+            msg: "Schlüsseltest fehlgeschlagen. Vorheriger Dateizustand aus {{ bootstrap_backup.stdout }} wiederhergestellt."
+
+    - name: Ergebnis und Sicherung melden
+      ansible.builtin.debug:
+        msg: "Schlüssel und sudo -n auf {{ inventory_hostname }} bestätigt. Sicherung unter {{ bootstrap_backup.stdout }}."

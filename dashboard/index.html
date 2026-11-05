@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CISCO-LAB · Verwaltung</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#overview"><span class="brand-mark" aria-hidden="true">CL</span><span>CISCO-LAB<small>Schulnetzwerklabor</small></span></a>
+    <nav aria-label="Bereiche">
+      <a href="#overview">Übersicht</a>
+      <a href="#clients">Schülerclients</a>
+      <a href="#deployment">Deployments</a>
+    </nav>
+    <div class="sidebar-foot"><span class="dot"></span> LAB-Teacher<br><small>Lokale Vorschau</small></div>
+  </aside>
+  <main id="overview">
+    <header>
+      <div><p class="eyebrow">Raumverwaltung</p><h1>LAB-Verwaltung</h1><p class="muted">Clientzustand, Wartung und Installationsfolgen</p></div>
+      <button id="refresh" class="button" type="button">Vorschau aktualisieren</button>
+    </header>
+    <p id="notice" class="notice" role="status">Wartungsbericht wird geladen …</p>
+    <section class="metrics" aria-label="Wartungsübersicht">
+      <article><span>Schülerclients</span><strong id="count-clients">—</strong><small>im Ansible-Inventar</small></article>
+      <article><span>Für Wartung frei</span><strong id="count-free">—</strong><small>laut letzter Vorschau</small></article>
+      <article><span>Nur Download</span><strong id="count-busy">—</strong><small>laufende Sitzungen geschützt</small></article>
+      <article><span>Zur Prüfung</span><strong id="count-review">—</strong><small>inklusive nicht erreichbarer Clients</small></article>
+    </section>
+    <section id="clients" class="panel">
+      <div class="section-heading"><div><p class="eyebrow">Inventar</p><h2>Schülerclients</h2></div><span id="stamp" class="muted"></span></div>
+      <div class="scroll"><table>
+        <caption class="sr-only">Letzte lesende Wartungsvorschau pro Schülerclient</caption>
+        <thead><tr><th>Client</th><th>Wartung</th><th>Updates</th><th>Bereinigung</th><th>Winbind</th><th>APT-Automatik</th></tr></thead>
+        <tbody id="client-rows"></tbody>
+      </table></div>
+    </section>
+    <section id="deployment" class="panel">
+      <div class="section-heading"><div><p class="eyebrow">Ansible</p><h2>Installationsfolge prüfen</h2></div><span class="badge neutral">Vorschau</span></div>
+      <p class="muted">Zeigt die Aufgaben der Baseline für genau einen ausgewählten Client.</p>
+      <form id="plan-form"><label for="host">Zielclient</label><select id="host" required></select><button id="plan-button" class="button" type="submit">Aufgaben anzeigen</button></form>
+      <p id="plan-status" role="status"></p>
+      <ol id="tasks" hidden></ol>
+    </section>
+  </main>
+</body>
+</html>

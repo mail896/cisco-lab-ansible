@@ -1,0 +1,9 @@
+[Unit]
+Description=CISCO-LAB maintenance window for LAB-08B
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 18:00:00 Europe/Berlin
+Persistent=false
+
+[Install]
+WantedBy=timers.target

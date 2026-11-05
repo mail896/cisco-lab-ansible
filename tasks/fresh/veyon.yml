@@ -1,0 +1,73 @@
+---
+- name: Veyon-Clientpakete bereitstellen
+  ansible.builtin.apt:
+    name: [veyon-service, veyon-plugins]
+    state: present
+    policy_rc_d: 101
+
+- name: Verzeichnis für den öffentlichen Lehrerschlüssel bereitstellen
+  ansible.builtin.file:
+    path: /etc/veyon/keys/public/teacher
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ausschließlich den geprüften öffentlichen Lehrerschlüssel installieren
+  ansible.builtin.copy:
+    src: "{{ lab_fresh_veyon_public_key }}"
+    dest: /etc/veyon/keys/public/teacher/key
+    owner: root
+    group: root
+    mode: '0644'
+  register: lab_fresh_veyon_key
+
+- name: Geprüfte Veyon-Einstellungen festlegen
+  ansible.builtin.set_fact:
+    lab_fresh_veyon_settings:
+      - {key: Authentication/Method, value: '1'}
+      - {key: Authentication/PublicKeyBaseDir, value: '/etc/veyon/keys/public'}
+      - {key: Network/LocalConnectOnly, value: 'false'}
+      - {key: VncServer/Plugin, value: '{39d7a07f-94db-4912-aa1a-c4df8aee3879}'}
+
+- name: Veyon-Einstellungen abfragen
+  ansible.builtin.command:
+    argv: [veyon-cli, config, get, "{{ item.key }}"]
+  loop: "{{ lab_fresh_veyon_settings }}"
+  register: lab_fresh_veyon_previous
+  changed_when: false
+  failed_when: lab_fresh_veyon_previous.rc not in [0, 255]
+
+- name: Schlüssel-Authentifizierung und X11-Unterstützung konfigurieren
+  ansible.builtin.command:
+    argv: [veyon-cli, config, set, "{{ item.item.key }}", "{{ item.item.value }}"]
+  loop: "{{ lab_fresh_veyon_previous.results }}"
+  when: item.rc != 0 or item.stdout | trim != item.item.value
+  register: lab_fresh_veyon_config
+
+- name: Tatsächlich konfigurierte Veyon-Schlüssel auflisten
+  ansible.builtin.command:
+    argv: [veyon-cli, authkeys, list]
+  register: lab_fresh_veyon_keys
+  changed_when: false
+
+- name: Genau den öffentlichen Lehrerschlüssel verlangen
+  ansible.builtin.assert:
+    that: lab_fresh_veyon_keys.stdout_lines == ['teacher/public']
+
+- name: Veyon-Client aktivieren
+  ansible.builtin.systemd_service:
+    name: veyon.service
+    enabled: true
+    state: "{{ 'restarted' if (lab_fresh_veyon_key.changed or lab_fresh_veyon_config.changed) else 'started' }}"
+
+- name: Veyon-Port vom Lehrer-PC prüfen
+  ansible.builtin.wait_for:
+    host: "{{ ansible_host }}"
+    port: 11100
+    timeout: 15
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"

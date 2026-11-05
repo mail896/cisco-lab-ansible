@@ -1,0 +1,12 @@
+[Effect-translucency]
+MoveResize[$i]=50
+
+[Effect-wobblywindows]
+Drag[$i]=92
+MoveFactor[$i]=20
+Stiffness[$i]=3
+WobblynessLevel[$i]=3
+
+[Plugins]
+translucencyEnabled[$i]=true
+wobblywindowsEnabled[$i]=true

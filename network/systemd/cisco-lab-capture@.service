@@ -1,0 +1,22 @@
+[Unit]
+Description=CISCO-LAB USB capture for one local student
+
+[Service]
+StandardInput=socket
+StandardOutput=null
+StandardError=journal
+CacheDirectory=cisco-lab-capture
+CacheDirectoryMode=0700
+# Stage the current package binary without its legacy file capabilities.
+ExecStartPre=/usr/bin/install -m 0700 /usr/bin/dumpcap /var/cache/cisco-lab-capture/dumpcap
+ExecStart=/usr/bin/python3 -IB /usr/local/lib/cisco-lab/network/capture_service.py
+RuntimeMaxSec=1810
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_NET_RAW
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX AF_PACKET AF_NETLINK AF_INET AF_INET6
+ProtectKernelTunables=yes
+ProtectControlGroups=yes

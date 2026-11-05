@@ -1,0 +1,15 @@
+---
+lab_desktop_group: lab.students
+lab_desktop_wallpaper: /usr/share/backgrounds/lab.png
+lab_clock_url: https://example.invalid/artifacts/unterrichtszeit_1.0.3_all.deb
+lab_clock_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+lab_desktop_launchers:
+  - applications:systemsettings.desktop
+  - preferred://filemanager
+  - applications:firefox-esr.desktop
+  - applications:packettracer.desktop
+  - applications:example.unterrichtszeit.desktop
+  - applications:org.kde.konsole.desktop
+  - applications:putty.desktop
+  - applications:cisco-console.desktop
+  - applications:wireshark-lab.desktop

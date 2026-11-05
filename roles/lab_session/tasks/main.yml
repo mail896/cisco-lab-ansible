@@ -1,0 +1,194 @@
+---
+- name: LAB-Gruppe durch IServ aufloesen
+  ansible.builtin.getent:
+    database: group
+    key: "{{ lab_session_group }}"
+
+- name: Gueltige LAB-Gruppe ohne Root-GID sicherstellen
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.getent_group[lab_session_group][1] | int > 0
+
+- name: Read-only Voraussetzungen und Sitzungsfreiheit pruefen
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -c
+      - "{{ lookup('ansible.builtin.file', role_path + '/files/preflight.py') | replace(\"MANAGED_SDDM = ''\", 'MANAGED_SDDM = ' + (lookup('ansible.builtin.file', role_path + '/files/sddm-session.conf') | to_json)) }}"
+  changed_when: false
+  check_mode: false
+
+- name: Betroffene Dateien und Schlaf-Target-Symlinks festhalten
+  ansible.builtin.set_fact:
+    lab_block03_files:
+      - /etc/cisco-lab/session.json
+      - /usr/local/libexec/cisco-lab/session-runtime
+      - /usr/local/libexec/cisco-lab/sddm-display-setup
+      - /etc/xdg/plasma-workspace/env/30-lab-session.sh
+      - /etc/cisco-lab/session-xdg/ksmserverrc
+      - /etc/cisco-lab/session-xdg/kscreenlockerrc
+      - /etc/cisco-lab/session-xdg/kcminputrc
+      - /etc/cisco-lab/session-xdg/plasma-welcomerc
+      - /etc/cisco-lab/session-xdg/kwinrc
+      - /etc/cisco-lab/session-xdg/powerdevilrc
+      - /etc/cisco-lab/session-xdg/kdeglobals
+      - /etc/cisco-lab/session-xdg/autostart/lab-session-runtime.desktop
+      - /etc/cisco-lab/session-xdg/autostart/lab-kde-session-cleanup.desktop
+      - /etc/cisco-lab/session-xdg/autostart/lab-kde-effects.desktop
+      - /etc/cisco-lab/session-xdg/autostart/monitor75.desktop
+      - /etc/systemd/user.conf.d/10-lab-fast-shutdown.conf
+      - /etc/systemd/logind.conf.d/99-cisco-lab-no-suspend.conf
+      - /etc/sddm.conf.d/zzzz-cisco-lab-session.conf
+      - /var/lib/sddm/state.conf
+      - /usr/share/backgrounds/cisco-lab-login.jpg
+      - /usr/share/sddm/themes/debian-breeze/theme.conf.user
+      - /etc/systemd/system/sleep.target
+      - /etc/systemd/system/suspend.target
+      - /etc/systemd/system/hibernate.target
+      - /etc/systemd/system/hybrid-sleep.target
+      - /etc/systemd/system/suspend-then-hibernate.target
+
+- name: Dateien vor der ersten Aenderung sichern
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -c
+      - "{{ lookup('ansible.builtin.file', role_path + '/files/snapshot.py') }}"
+    stdin: "{{ lab_block03_files | to_json }}"
+  register: lab_block03_snapshot
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Vollstaendigen Rollenstand und Einstieg sichern
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ lab_block03_snapshot.stdout }}/source/{{ item.name }}"
+    owner: root
+    group: root
+    mode: preserve
+  loop:
+    - {src: "{{ role_path }}/", name: role/}
+    - {src: "{{ playbook_dir }}/block03-session.yml", name: block03-session.yml}
+  when: not ansible_check_mode
+
+- name: Benoetigte X11-Werkzeuge installieren
+  ansible.builtin.apt:
+    name: [python3, x11-xserver-utils, numlockx]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Verzeichnisse bereitstellen
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /etc/cisco-lab
+    - /etc/cisco-lab/session-xdg
+    - /etc/cisco-lab/session-xdg/autostart
+    - /usr/local/libexec/cisco-lab
+    - /usr/local/share/cisco-lab/no-wayland-sessions
+    - /etc/xdg/plasma-workspace/env
+    - /etc/systemd/user.conf.d
+    - /etc/systemd/logind.conf.d
+    - /etc/sddm.conf.d
+    - /usr/share/backgrounds
+
+- name: Sicherstellen dass die alternative Wayland-Sitzungsliste leer ist
+  ansible.builtin.find:
+    paths: /usr/local/share/cisco-lab/no-wayland-sessions
+    patterns: '*.desktop'
+    file_type: any
+  register: lab_wayland_entries
+
+- name: Keine unbekannten Sitzungsdateien loeschen
+  ansible.builtin.assert:
+    that: lab_wayland_entries.matched == 0
+    fail_msg: Der fuer SDDM vorgesehene leere Sitzungspfad enthaelt Desktop-Dateien.
+
+- name: Gruppenkonfiguration erstellen
+  ansible.builtin.template:
+    src: session.json.j2
+    dest: /etc/cisco-lab/session.json
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: LAB-spezifische KDE-Vorgaben installieren
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/cisco-lab/session-xdg/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: [ksmserverrc, kscreenlockerrc, kcminputrc, plasma-welcomerc, kwinrc, powerdevilrc, kdeglobals]
+
+- name: Hook und Startprogramme installieren
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - {src: 30-lab-session.sh, dest: /etc/xdg/plasma-workspace/env/30-lab-session.sh, mode: '0644'}
+    - {src: session_runtime.py, dest: /usr/local/libexec/cisco-lab/session-runtime, mode: '0755'}
+    - {src: session-runtime.desktop, dest: /etc/cisco-lab/session-xdg/autostart/lab-session-runtime.desktop, mode: '0644'}
+    - {src: sddm-display-setup.sh, dest: /usr/local/libexec/cisco-lab/sddm-display-setup, mode: '0755'}
+
+- name: Konkurrierende alte Autostarts nur fuer LAB-Sitzungen deaktivieren
+  ansible.builtin.copy:
+    src: disabled.desktop
+    dest: "/etc/cisco-lab/session-xdg/autostart/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: [lab-kde-session-cleanup.desktop, lab-kde-effects.desktop, monitor75.desktop]
+
+- name: Systemweite Sitzungs- und Anmeldevorgaben nach Sicherung bereitstellen
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - {src: logind.conf, dest: /etc/systemd/logind.conf.d/99-cisco-lab-no-suspend.conf}
+    - {src: user-stop.conf, dest: /etc/systemd/user.conf.d/10-lab-fast-shutdown.conf}
+    - {src: sddm-session.conf, dest: /etc/sddm.conf.d/zzzz-cisco-lab-session.conf}
+
+- name: LAB-Hintergrund für den SDDM-Anmeldebildschirm einrichten
+  ansible.builtin.import_tasks: greeter-background.yml
+
+- name: Vorhandene SDDM-Statusdatei feststellen
+  ansible.builtin.stat:
+    path: /var/lib/sddm/state.conf
+  register: lab_sddm_state
+
+- name: Gespeicherten letzten Benutzernamen aus bestehendem Status entfernen
+  community.general.ini_file:
+    path: /var/lib/sddm/state.conf
+    section: Last
+    option: User
+    state: absent
+    create: false
+  when: lab_sddm_state.stat.exists
+
+- name: Schlafzustands-Targets maskieren, nichts stoppen oder neu starten
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    masked: true
+    daemon_reload: true
+  loop: [sleep.target, suspend.target, hibernate.target, hybrid-sleep.target, suspend-then-hibernate.target]
+
+- name: Noch ausstehende Aktivierung und Anmeldetest melden
+  ansible.builtin.debug:
+    msg: >-
+      Dateien vorbereitet. Kein Neustart von SDDM/logind/User-Managern,
+      kein daemon-reexec und kein Rechnerneustart ausgeloest.
+      SDDM/logind/systemd-Vorgaben beim spaeter vereinbarten Neustart testen;
+      KDE-Vorgaben ab naechster LAB-Anmeldung. Sicherung:
+      {{ lab_block03_snapshot.stdout | default('Check-Mode: keine Sicherung erstellt') }}.

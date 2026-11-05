@@ -1,0 +1,90 @@
+Entscheidung zur Netz-Rechte-Trennung — 03.11.2026
+Historischer Architekturentscheid, inzwischen lokal implementiert; NICHT installiert. Keine Clientverbindungen in diesem Schritt.
+
+NACHGEWIESENER BEFUND
+NetworkManager 1.52.1 verwendet in src/core/nm-auth-manager.c, Zeilen 369–376,
+bei CheckAuthorization einen leeren a{ss}-Details-Dictionary. Es gibt dort
+keinen Eintrag fuer connection-uuid, interface-name oder MAC. Auch die
+Profil-Updateautorisierung reicht nur subject/action/allow_interaction weiter.
+Eine Polkit-Regel, die auf action.lookup('connection-uuid') baut, ist fuer
+diesen Quellstand keine sichere profilbezogene Freigabe.
+Die Versionsnummer wurde lokal auf LAB-Teacher gelesen; die Clients wurden
+in diesem Arbeitsschritt nicht verbunden oder auf einen gepatchten NM-Build
+untersucht. Vor Deployment genaue installierte Version/Policykette verifizieren.
+
+EXAKTE PRIMAERQUELLEN
+https://github.com/NetworkManager/NetworkManager/blob/1.52.1/src/core/nm-auth-manager.c#L369
+https://github.com/NetworkManager/NetworkManager/blob/1.52.1/src/core/settings/nm-settings-connection.c#L1735
+https://www.networkmanager.dev/docs/api/latest/settings-connection.html
+
+BESTAETIGTE ENTSCHEIDUNG DES BETREIBERS
+Eigener Schuelerdialog 'Labornetz einstellen' ist akzeptiert, um die strikte
+Trennung zu erreichen. Die native KDE-Netzansicht darf Status anzeigen;
+Aenderungen erfolgen ausschliesslich ueber den begrenzten Vermittler.
+AD/Samba-Gruppe lab.students enthaelt die Schueler dieses Unterrichts.
+Sie ist bestehende zentrale Berechtigungsquelle (auch serielle Konsole),
+keine neue lokale Gruppe anlegen, keine aufgelöste GID fest codieren.
+Nicht die Administratorgruppe und nicht alle domain.users freigeben.
+
+BERECHTIGUNGSWEG
+1. Fruehe Polkit-Regel verweigert lab.students-Mitgliedern NetworkManager-Aktionen.
+   Der Entwurf 10-cisco-lab-network.rules liefert NO, nicht AUTH_ADMIN/YES.
+   Status-APIs benoetigen diese Schreibfreigaben nicht. Weitere Systemregeln
+   und etwaige .pkla-Kompatibilitaet vor Deployment auf Vorrang pruefen.
+2. Alte 49-networkmanager-cisco.rules nach Sicherung ersetzen/entfernen.
+   Neue Sperre NIE allein ausrollen, solange Dialog/Vermittler fehlen!
+3. Ein kleiner Root-Dienst hat ausschliesslich eine begrenzte LAB-Schnittstelle.
+   Geplanter Transport: systemweiter D-Bus mit authentifiziertem eindeutigen
+   Absender; UID ueber den Bus ermitteln. Alternativ Unix-Socket SO_PEERCRED.
+   Niemals UID/Gruppen/PID aus dem Benutzer-JSON als Autorisierung behandeln.
+4. Aufruf nur fuer verifiziertes lab.students-Mitglied in aktiver lokaler
+   Benutzersitzung. Keine pauschale Remote-/SSH-/Systembus-Freigabe fuer die Gruppe.
+   Verwendete Identitaet muss vom Transport stammen, nicht vom Dialog.
+5. Root-eigene unveraenderliche Zuordnung speichert Schul-/Labor-UUID, MAC,
+   USB-Busrolle und geschuetzte Schulsubnetze. Benutzer darf keinen Zieladapter,
+   Dateipfad, Profilnamen, UUID, Berechtigungen, DNS oder Shellbefehl uebergeben.
+6. Vor jeder Operation aktuelle Hardware-/Profilidentitaet gegen die Zuordnung
+   pruefen. Mehrdeutigkeit oder wechselnde MAC/UUID: Fehler, keine andere NIC waehlen.
+7. Nur feste Aktionen apply/clear/status. JSON groessen-/typbegrenzt, keine
+   beliebigen nmcli-Argumente. Clear entfernt nur Laborwerte, nie Schulprofil.
+8. Dienst serialisiert Apply/Heal/Login-Reset mit einer gemeinsamen Sperre.
+   Root-interner Login-Reset darf nur nach echter neuer lokaler Schuelersitzung
+   erfolgen, nicht nach jeder Terminaloeffnung und nicht bei SSH-/Veyon-Verbindung.
+9. Ein gemeinsamer Timer repariert Schule und fehlendes Laborprofil. Er darf
+   waehrend der Sitzung keine Laboruebungsadressen periodisch zuruecksetzen.
+10. Netzwerk-Aktivierung mit Snapshot und rueckrollbarer Transaktion; aktive
+    Schulverbindung nicht herunterfahren, NM nicht pauschal neu starten.
+    Tatsaechliche Wiederherstellung und Default-/DNS-Routen vor Ort testen.
+
+VORBEREITETER VALIDIERUNGSKERN
+lab_request.py prueft streng Schema, Mengen, Adressen, direkt erreichbare
+Next-Hops und Schulnetzueberschneidungen; verwirft Defaults und auch Supernetze,
+die die Schulroute ueberdecken wuerden. IPv6-Link-Local-Next-Hop fe80::1 ist
+moeglich, aber ohne vom Benutzer vorgegebenen Scope/Interface.
+IPv4 und IPv6 manuell; nicht konfigurierte Familie disabled. Kein DHCP,
+kein globales Gateway, keine DNS-Aenderung; never-default und feste Route-Metrik.
+Keyfile enthaelt nur rootseitig vorgegebene Labor-UUID/MAC/Schnittstelle.
+Clear ergibt neutralen Zustand ohne IP/Autoconnect. Hardwarelink-Up und
+wirksame Aktivierung sind Aufgabe des kuenftigen Dienstes, nicht dieses Parsers.
+
+GRENZEN DER VALIDIERUNG
+Nur die im Manifest angegebenen Schulsubnetze sind gegen Ueberdeckung geschuetzt.
+Weitere reale Schul-/Management-/DNS-Netze vor Deployment ermitteln und aufnehmen.
+Eine gezielte Laborroute zu einer nicht geschuetzten externen Zieladresse
+kann diesen Zielverkehr ins Labor lenken; never-default verbietet nur die
+Default-Route. Das ist von der gewollten freien gezielten Routenuebung zu trennen.
+Keine unbegruendete zusaetzliche Begrenzung auf bestimmte private Adressbereiche.
+Root-Manifeste koennen nicht aus Benutzer-Uploads als vertrauenswuerdig gelten.
+
+AKTUELLER LIEFERSTAND
+Der Root-Vermittler, authentifizierter Unix-Socket, Qt-Dialog, Login-Reset,
+Heal-Schleife, Transaktionssicherungen und Testmigrations-/Rueckweg sind inzwischen
+implementiert. Aktuelle Beschreibung und Abnahmeschritte:
+../../docs/block05-netzwerkdienst.txt
+Der oben beschriebene alternative Systembus-Transport wurde nicht verwendet;
+implementiert ist AF_UNIX mit Kernel-Peer-Credentials und logind-Pruefung.
+Alle Laufzeittests in dieser Vorbereitung nutzen temporaere Verzeichnisse und
+einen simulierten NetworkManager. Noch keine Clientinstallation oder reale
+NetworkManager-/Polkit-/AD-Abnahme. Keine Behauptung bereits wirksamer Trennung
+auf den Laborrechnern. Der fruehere reine Qt-Entwurf bleibt unter prototype/;
+der tatsaechlich verbundene Dialog liegt unter dialog/main.py.

@@ -1,0 +1,50 @@
+:root { color-scheme: light; font: 15px/1.5 system-ui, sans-serif; background: #f2f5f8; color: #17263a; scroll-behavior: smooth; }
+* { box-sizing: border-box; }
+body { margin: 0; display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
+.sidebar { background: #101d2f; color: #dce6f4; position: sticky; top: 0; height: 100vh; padding: 32px 22px; display: flex; flex-direction: column; }
+.brand { display: flex; align-items: center; gap: 12px; color: white; text-decoration: none; font-weight: 760; letter-spacing: .055em; }
+.brand-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 9px; background: #ffd36e; color: #17263a; }
+.brand small { display: block; color: #b0bfd3; font-weight: 500; letter-spacing: 0; }
+nav { display: grid; gap: 6px; margin-top: 42px; }
+nav a { color: #dce6f4; text-decoration: none; padding: 9px 12px; border-radius: 7px; }
+nav a:hover, nav a:focus-visible { background: #273c56; }
+.sidebar-foot { margin-top: auto; color: white; }
+.sidebar-foot small { color: #b0bfd3; padding-left: 15px; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #77deaf; margin-right: 5px; }
+main { padding: 38px clamp(20px, 4vw, 58px); max-width: 1480px; width: 100%; }
+header, .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.eyebrow { color: #46617c; font-weight: 750; text-transform: uppercase; letter-spacing: .12em; font-size: .72rem; margin: 0 0 4px; }
+h1, h2 { line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(1.8rem, 4vw, 2.9rem); letter-spacing: -.035em; }
+h2 { font-size: 1.36rem; letter-spacing: -.02em; }
+.muted { color: #546579; }
+header .muted { margin: 9px 0 0; }
+.button { border: 0; border-radius: 8px; color: white; background: #1c4971; padding: 10px 14px; font: inherit; font-weight: 650; cursor: pointer; }
+.button:hover { background: #153a5a; }
+.button:disabled { opacity: .6; cursor: wait; }
+:focus-visible { outline: 3px solid #c07b10; outline-offset: 3px; }
+.notice { background: #e3edf7; border-left: 3px solid #4b7397; padding: 10px 13px; margin: 22px 0; border-radius: 5px; color: #23435e; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; margin-bottom: 20px; }
+.metrics article, .panel { background: white; border: 1px solid #dce4ed; border-radius: 11px; padding: 17px 20px; }
+.metrics span, .metrics small { color: #546579; }
+.metrics strong { display: block; font-size: 2rem; line-height: 1.25; }
+.panel { margin-bottom: 18px; scroll-margin-top: 18px; }
+.panel p.muted { margin: 10px 0 15px; }
+.scroll { overflow: auto; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; white-space: nowrap; }
+th, td { text-align: left; border-bottom: 1px solid #e6ebf1; padding: 9px 10px; }
+thead th { color: #526478; font-size: .82rem; }
+tbody th { font-weight: 720; }
+tbody tr:last-child > * { border-bottom: 0; }
+.badge { display: inline-block; padding: 3px 8px; font-size: .77rem; font-weight: 650; border-radius: 20px; }
+.good { background: #e4f4e9; color: #205f3b; }
+.warn { background: #fff1d3; color: #704712; }
+.neutral { background: #e9eff6; color: #36516c; }
+form { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+form label { font-weight: 650; }
+select { border: 1px solid #cbd7e3; background: white; border-radius: 8px; color: inherit; padding: 9px 10px; font: inherit; }
+#tasks { max-height: 300px; overflow: auto; background: #f2f5f8; border-radius: 7px; padding: 12px 20px 12px 38px; }
+#tasks li { padding: 2px 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 900px) { body { grid-template-columns: 170px minmax(0, 1fr); } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { body { display: block; } .sidebar { position: static; height: auto; padding: 15px 18px; } nav { display: flex; flex-wrap: wrap; margin-top: 12px; } .sidebar-foot { display: none; } main { padding: 20px 14px; } header { align-items: flex-start; flex-direction: column; } .section-heading { flex-wrap: wrap; } .metrics article, .panel { padding: 12px; } }

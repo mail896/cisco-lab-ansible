@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=PuTTY LAB-Konsole
+GenericName=PuTTY
+Comment=Serielle Cisco-Konsole mit Adapterauswahl
+Exec=/usr/local/bin/lab-serial-console putty
+TryExec=/usr/bin/putty
+Icon=putty
+Terminal=false
+Categories=Network;TerminalEmulator;
+StartupNotify=false
+Actions=SSH;
+
+[Desktop Action SSH]
+Name=PuTTY fuer SSH oeffnen
+Exec=/usr/bin/putty

@@ -1,0 +1,183 @@
+---
+- name: Installierte Programme und bestehende Dateirechte prüfen
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -IB
+      - -c
+      - "{{ lookup('ansible.builtin.file', lab_settings_files + '/settings_access.py') }}"
+      - --check
+      - "{{ lab_settings_gid }}"
+  changed_when: false
+  check_mode: false
+
+- name: Vorhandenen Plasma-Startpfad prüfen
+  ansible.builtin.stat:
+    path: "{{ lab_settings_env }}"
+    follow: false
+    checksum_algorithm: sha256
+  register: lab_settings_env_stat
+
+- name: Nur den bekannten Plasma-Startpfad übernehmen
+  ansible.builtin.assert:
+    that:
+      - lab_settings_env_stat.stat.isreg | default(false)
+      - lab_settings_env_stat.stat.uid == 0
+      - not lab_settings_env_stat.stat.wgrp
+      - not lab_settings_env_stat.stat.woth
+      - lab_settings_env_stat.stat.checksum in ['7c9a95c9bdd3e48718c6f1b55f7beed8febc850fb48f9929362279f89e7bb97d', lookup('ansible.builtin.file', lab_settings_files + '/20-lab-desktop.sh', rstrip=False) | hash('sha256')]
+
+- name: Konfiguration und bisherige ACLs sichern
+  when: not ansible_check_mode
+  block:
+    - name: Betroffene Konfigurationsdateien erfassen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - "{{ lookup('ansible.builtin.file', lab_settings_files + '/snapshot.py') }}"
+        stdin: "{{ ([lab_settings_env, lab_settings_helper, lab_settings_hook, lab_settings_runner] + (lab_settings_ids | map('regex_replace', '^', lab_settings_menu + '/') | list) + (lab_settings_favorites_files | map(attribute='dest') | list)) | to_json }}"
+      register: lab_settings_backup
+
+    - name: Programm-ACLs erfassen
+      ansible.builtin.command:
+        argv: "{{ ['/usr/bin/getfacl', '-pn', '--'] + lab_settings_binaries }}"
+      register: lab_settings_acl
+      changed_when: false
+
+    - name: ACLs für den Rückweg ablegen
+      ansible.builtin.copy:
+        dest: "{{ lab_settings_backup.stdout }}/settings.acl"
+        content: "{{ lab_settings_acl.stdout }}\n"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Kopie des Teststands zur Sicherung ablegen
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ lab_settings_backup.stdout }}/{{ item.dest }}"
+        owner: root
+        group: root
+        mode: '0600'
+      loop:
+        - {src: "{{ lab_settings_files }}/snapshot.py", dest: restore.py}
+        - {src: "{{ lab_settings_files }}/settings_access.py", dest: settings_access.py}
+        - {src: "{{ playbook_dir }}/tasks/settings-access.yml", dest: settings-access.yml}
+        - {src: "{{ playbook_dir }}/tasks/settings-vars.yml", dest: settings-vars.yml}
+
+- name: Gruppensperre und Menü für die nächste Anmeldung bereitstellen
+  when: not ansible_check_mode
+  block:
+    - name: ACL-Helfer installieren
+      ansible.builtin.copy:
+        src: "{{ lab_settings_files }}/settings_access.py"
+        dest: "{{ lab_settings_helper }}"
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Menü-Überlagerung bereitstellen
+      ansible.builtin.file:
+        path: "{{ lab_settings_menu }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Allgemeine Einstellungsstarter im LAB-Menü ausblenden
+      ansible.builtin.copy:
+        dest: "{{ lab_settings_menu }}/{{ item }}"
+        src: "{{ lab_settings_files }}/settings-menu-entry.desktop"
+        owner: root
+        group: root
+        mode: '0644'
+      loop: "{{ lab_settings_ids }}"
+
+    - name: Verdeckte Menüeinträge validieren
+      ansible.builtin.command:
+        argv: [/usr/bin/desktop-file-validate, "{{ lab_settings_menu }}/{{ item }}"]
+      loop: "{{ lab_settings_ids }}"
+      changed_when: false
+
+    - name: Menü-Überlagerung für LAB-Sitzungen aktivieren
+      ansible.builtin.copy:
+        src: "{{ lab_settings_files }}/20-lab-desktop.sh"
+        dest: "{{ lab_settings_env }}"
+        owner: root
+        group: root
+        mode: '0644'
+        validate: /bin/sh -n %s
+
+    - name: Treffer der KDE-Einstellungssuche in LAB-Sitzungen ausblenden
+      ansible.builtin.copy:
+        src: "{{ lab_settings_files }}/krunnerrc"
+        dest: "{{ lab_settings_runner }}"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: LAB-Standardfavoriten und Bereinigung alter Verknüpfungen bereitstellen
+      ansible.builtin.copy:
+        src: "{{ lab_settings_files }}/{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: "{{ item.mode }}"
+      loop: "{{ lab_settings_favorites_files }}"
+
+    - name: Lese- und Ausführungsrecht der LAB-Gruppe entziehen
+      ansible.builtin.command:
+        argv: [/usr/bin/python3, -IB, "{{ lab_settings_helper }}", "{{ lab_settings_gid }}"]
+
+    - name: Zugriff als Schüler und Administrator verifizieren
+      ansible.builtin.command:
+        argv:
+          - /usr/sbin/runuser
+          - -u
+          - "{{ item.name }}"
+          - --
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            import os, sys
+            allowed = sys.argv[1] == 'yes'
+            for path in sys.argv[2:]:
+                assert os.access(path, os.R_OK) == allowed
+                assert os.access(path, os.X_OK) == allowed
+          - "{{ item.allowed }}"
+          - /usr/bin/systemsettings
+          - /usr/bin/kcmshell6
+          - /usr/bin/kinfocenter
+      loop: "{{ lab_settings_test_accounts }}"
+      changed_when: false
+
+    - name: Dateirechte nach Paketänderungen erneut prüfen lassen
+      ansible.builtin.copy:
+        dest: "{{ lab_settings_hook }}"
+        content: "post-invoke=/usr/bin/python3 -IB {{ lab_settings_helper }} {{ lab_settings_gid }}\n"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: dpkg-Konfiguration mit der installierten Version prüfen
+      ansible.builtin.command:
+        argv: [/usr/bin/dpkg, --validate-pkgname, cisco-lab-settings-access]
+      changed_when: false
+  rescue:
+    - name: Vorherige Konfigurationsdateien wiederherstellen
+      ansible.builtin.command:
+        argv: [/usr/bin/python3, -IB, "{{ lab_settings_backup.stdout }}/restore.py", --restore, "{{ lab_settings_backup.stdout }}"]
+    - name: Vorherige Datei-ACLs wiederherstellen
+      ansible.builtin.command:
+        argv: [/usr/bin/setfacl, "--restore={{ lab_settings_backup.stdout }}/settings.acl"]
+    - name: Fehlgeschlagenen Sperrtest melden
+      ansible.builtin.fail:
+        msg: "Vorherige Konfiguration und ACLs wiederhergestellt. Sicherung {{ lab_settings_backup.stdout }}"
+
+- name: Sicherung für den Rückweg melden
+  ansible.builtin.debug:
+    var: lab_settings_backup.stdout
+  when: not ansible_check_mode
