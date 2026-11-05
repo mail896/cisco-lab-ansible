@@ -1,12 +1,14 @@
 # CISCO-LAB mit Debian und Ansible
 
-Dieses Projekt beschreibt die Einrichtung und Verwaltung eines
-Netzwerklabors mit Debian-Schülerclients. Die Ansible-Verwaltung läuft
+Ansible-Baseline für ein Cisco-Netzwerklabor mit Debian- und IServ-Clients.
+Sie richtet Arbeitsplätze ein und trennt den Schulanschluss vom Übungsnetz. Die Ansible-Verwaltung läuft
 auf einem Rechner der Lehrkraft. Die Clients werden zunächst mit dem
 vorgesehenen Schulimage installiert und melden sich an der bestehenden
 Schuldomäne an.
 
 ## Aufbau
+
+![Netzplan eines LAB-Teams mit getrenntem IServ- und Übungsanschluss](docs/labornetz.svg)
 
 Jeder Arbeitsplatz hat zwei physische Ethernet-Anschlüsse. Der interne
 Anschluss dient der Schulverbindung und behält DHCP, DNS und die
