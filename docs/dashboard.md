@@ -1,28 +1,40 @@
-# Teacher dashboard operations
+# Lokale LAB-Verwaltung
 
-The dashboard runs on LAB-Teacher as a local Python service. It uses the teacher's verified SSH identity for the LAB clients. Keep the HTTP listener on loopback and use an authenticated HTTPS reverse proxy if operators need remote access. The included nginx and Caddy files are configuration examples.
+**Deutsch** · [English](dashboard.en.md)
 
-## Pilot, review and release
+Die Webverwaltung läuft als Python-Dienst auf LAB-Teacher und verwendet dessen geprüften SSH-Zugang zu den LAB-Clients. Der HTTP-Dienst bindet an Loopback. Für Zugriff aus dem Schulnetz einen authentifizierten HTTPS-Reverse-Proxy verwenden. Die nginx- und Caddy-Dateien im Repository sind Beispiele.
 
-1. Choose an operation and one test workstation, LAB-08A or LAB-08B.
-2. Review the generated Ansible task list and start the pilot. The dashboard records the source revision, images and output.
-3. Test the expected behaviour at the workstation, then record the acceptance in the dashboard.
-4. Start the room rollout for the accepted revision. Check each client's result and retry pending targets for that revision.
+Aus dem Repository als Verwaltungsbenutzer starten:
 
-Image deployment checks SHA-256, ownership, file permissions and the relevant KDE and SDDM settings. A matching client skips image transfers and snapshots. On a change, the previous files are snapshotted. Each changed image is sent once and copied into the run's backup on the client. An immediate greeter refresh requires a free local console. The existing desktop session sees a new wallpaper at its next sign-in.
+```bash
+python3 -B -m dashboard.server \
+  --report "$lab_maintenance_report" \
+  --lab08b-known-hosts "$lab08b_known_hosts"
+```
 
-## Fresh installation
+Die Variablen bezeichnen den privaten lokalen Wartungsbericht und die separat geprüfte SSH-Hostdatei für LAB-08B. Der Dienst ist lokal unter `http://127.0.0.1:8765` erreichbar.
 
-1. Install the Debian 13 KDE image through IServ. The internal network adapter must carry the school DHCP address and default route.
-2. Verify the newly installed host's SSH fingerprint. Prepare a private client manifest with the device identity, USB adapter, package inputs and target host.
-3. Run the SSH admission stage on LAB-Teacher with `baseline-client.py --dashboard` and the reviewed host and manifest arguments. It prompts for the local administrator credentials.
-4. In the dashboard, select that single workstation under fresh installation. This applies the baseline and provisions the local classroom account.
-5. After reboot, verify an IServ sign-in, Files access, the lab dialog and a separate local classroom sign-in. Check the desktop, serial console and Wireshark. Assess any version-bound Winbind workaround separately.
+## Pilot, Abnahme und Raumdeploy
 
-The public sample inventory and network manifests are starting points. Keep the live inventory, verified host-key files, manifests, the classroom password hash and other runtime credentials in the local installation. The local classroom account playbook requires a locally generated password hash and an explicit decision about a matching directory account.
+1. Aufgabe und einen Pilotclient auswählen, LAB-08A oder LAB-08B.
+2. Die Ansible-Aufgaben prüfen und den Lauf starten. Die Webverwaltung speichert Quellstand, Bildauswahl und Laufprotokoll.
+3. Die erwarteten Funktionen am Arbeitsplatz testen und die Abnahme eintragen.
+4. Den freigegebenen Stand im Raum ausrollen. Ergebnisse je Client prüfen und offene Ziele für denselben Stand nachholen.
 
-## Encrypted backup
+Der Bilddeploy prüft SHA-256, Eigentümer, Dateirechte und die relevanten KDE- und SDDM-Einstellungen. Bei vollständiger Übereinstimmung entfallen Übertragung und Sicherung. Bei Änderungen sichert der Lauf den vorherigen Stand und überträgt jede geänderte Bilddatei einmal. Die Kopie des eingespielten Bilds in der Sicherung entsteht lokal auf dem Client. Ein sofortiger Greeter-Neustart setzt eine freie Konsole voraus. Das Desktopbild erscheint in der nächsten KDE-Sitzung.
 
-The backup job captures the project tree, dashboard service and drop-in configuration, dashboard credential, wallpaper library and selection, deployment and room logs, and local SSH material needed for recovery. The archive is encrypted and saved on the local data volume. An optional SCP copy can be enabled for the configured backup host. The SCP credential is excluded from the archive.
+## Neuinstallation
 
-Store the backup recovery key separately and verify a restore on a disposable machine. Reverse-proxy TLS material that is readable only by root, the recovery key itself and the off-host proxy configuration need their own recovery procedure. GitHub is a source publication and is separate from the operational backup.
+1. Das Debian-13-Image mit KDE über IServ installieren. Die interne Netzwerkkarte braucht die Schul-IP und die Standardroute.
+2. Den neuen SSH-Fingerabdruck prüfen. Ein privates Hostmanifest mit Geräteidentität, USB-Netzwerkkarte, Paketpfaden und Zielrechner vorbereiten.
+3. Auf LAB-Teacher `baseline-client.py --dashboard` mit geprüftem Host und Manifest ausführen. Die Erstaufnahme fragt die lokalen Administrator-Zugangsdaten ab.
+4. In der Webverwaltung genau diesen Client unter **Neuinstallation** auswählen. Sie installiert die Baseline und danach das lokale Sammelkonto.
+5. Nach dem Neustart IServ-Anmeldung, Files, Labornetz, lokale Anmeldung, Desktopbild, USB-Konsole und Wireshark prüfen. Einen Winbind-Patch separat passend zum Paketstand bewerten.
+
+Das Beispielinventar und die Beispielmanifeste dienen als Vorlage. Live-Inventar, SSH-Hostdateien, Hostmanifeste, Passwort-Hash des Sammelkontos und weitere Zugangsdaten bleiben lokal. Beim Sammelkonto ausdrücklich festlegen, ob ein gleichnamiges Verzeichniskonto bewusst verdeckt werden darf.
+
+## Verschlüsselte Sicherung
+
+Die Sicherung umfasst den Projektbaum, den Dashboard-Dienst samt Drop-in, das lokale Dashboard-Passwort, Bildbibliothek und Bildauswahl, die Deploy- und Sammelprotokolle sowie das für die Wiederherstellung erforderliche lokale SSH-Material. Das verschlüsselte Archiv landet auf der lokalen Datenpartition und kann optional per SCP kopiert werden. Das SCP-Passwort selbst ist ausgeschlossen.
+
+Den Wiederherstellungsschlüssel separat aufbewahren und die Wiederherstellung auf einem Testsystem prüfen. Nur für root lesbare TLS-Schlüssel und die Konfiguration eines separaten Reverse-Proxys benötigen eine eigene Sicherung. Die öffentliche GitHub-Kopie ist eine Quellcode-Veröffentlichung.

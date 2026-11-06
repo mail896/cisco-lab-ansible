@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" role="img" aria-labelledby="title desc">
-  <title id="title">Cisco lab topology for one team</title>
-  <desc id="desc">Two Intel NUCs use their internal network cards for IServ. Their USB Ethernet adapters connect to the exercise network through a switch and router on each side. The routers are linked.</desc>
+  <title id="title">Netzwerk eines Cisco-LAB-Teamarbeitsplatzes</title>
+  <desc id="desc">Zwei Intel NUCs sind über ihre internen Netzwerkkarten mit IServ verbunden. Ihre USB-Ethernet-Adapter führen ins Übungsnetz über je einen Switch und Router. Die Router sind miteinander verbunden.</desc>
   <rect width="960" height="480" rx="24" fill="#f2f6fb"/>
   <g font-family="system-ui, sans-serif" fill="#162b45" text-anchor="middle">
-    <text x="480" y="51" font-size="30" font-weight="700">Network layout for one lab team</text>
-    <text x="480" y="80" font-size="16" fill="#405b76">Two student seats with separate school and exercise networks</text>
+    <text x="480" y="51" font-size="30" font-weight="700">Netzwerk eines LAB-Teams</text>
+    <text x="480" y="80" font-size="16" fill="#405b76">Zwei Schülerplätze mit getrenntem Schul- und Übungsanschluss</text>
     <g stroke="#1d66b0" stroke-width="4" fill="none">
       <path d="M234 170H308V274M726 170H652V274"/>
       <path d="M386 274V190H423M574 274V190H537M470 190H490"/>
@@ -21,10 +21,10 @@
       <text x="816" y="148">PC-B · Intel NUC</text>
     </g>
     <g font-size="14">
-      <text x="144" y="176" fill="#1d66b0">USB Ethernet</text>
-      <text x="816" y="176" fill="#1d66b0">USB Ethernet</text>
-      <text x="144" y="205" fill="#16804c">Internal NIC</text>
-      <text x="816" y="205" fill="#16804c">Internal NIC</text>
+      <text x="144" y="176" fill="#1d66b0">USB-Ethernet</text>
+      <text x="816" y="176" fill="#1d66b0">USB-Ethernet</text>
+      <text x="144" y="205" fill="#16804c">Interne NIC</text>
+      <text x="816" y="205" fill="#16804c">Interne NIC</text>
     </g>
     <g fill="#1d66b0">
       <rect x="288" y="274" width="118" height="46" rx="10"/>
@@ -38,14 +38,14 @@
       <text x="447" y="196">R1</text>
       <text x="513" y="196">R2</text>
     </g>
-    <text x="480" y="144" font-size="16" fill="#1d66b0" font-weight="700">Exercise network</text>
-    <text x="480" y="256" font-size="14" fill="#405b76">Manual IPv4 and IPv6 addresses</text>
+    <text x="480" y="144" font-size="16" fill="#1d66b0" font-weight="700">Übungsnetz</text>
+    <text x="480" y="256" font-size="14" fill="#405b76">Manuelle IPv4-/IPv6-Adressen</text>
     <rect x="370" y="335" width="220" height="60" rx="11" fill="#e0f3e8" stroke="#16804c" stroke-width="2"/>
-    <text x="480" y="360" font-size="18" fill="#12633b" font-weight="700">IServ school network</text>
-    <text x="480" y="382" font-size="14" fill="#12633b">DHCP and default route</text>
+    <text x="480" y="360" font-size="18" fill="#12633b" font-weight="700">IServ-Schulnetz</text>
+    <text x="480" y="382" font-size="14" fill="#12633b">DHCP und Standardroute</text>
     <path d="M250 440h35" stroke="#1d66b0" stroke-width="4"/>
-    <text x="298" y="445" text-anchor="start" font-size="14">Exercise link</text>
+    <text x="298" y="445" text-anchor="start" font-size="14">Übungsanschluss</text>
     <path d="M515 440h35" stroke="#16804c" stroke-width="4"/>
-    <text x="563" y="445" text-anchor="start" font-size="14">School link</text>
+    <text x="563" y="445" text-anchor="start" font-size="14">Schulanschluss</text>
   </g>
 </svg>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A hands-on Cisco networking classroom run with Debian, KDE, Ansible and a teacher dashboard at BBS Einbeck.">
+  <title>CISCO Lab Ansible · BBS Einbeck</title>
+  <link rel="alternate" hreflang="de" href="./">
+  <link rel="alternate" hreflang="en" href="en.html">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <header class="bar"><div class="wrap"><a href="en.html" class="mark">BBS Einbeck <span> / </span> CISCO Lab</a><nav aria-label="Project"><a href="#topology">Lab topology</a><a href="#operations">Operations</a><a href="https://github.com/mail896/cisco-lab-ansible">GitHub ↗</a><a href="./" lang="de" hreflang="de">Deutsch</a></nav></div></header>
+  <main class="wrap">
+    <section class="intro">
+      <p class="eyebrow">Networking classroom · BBS Einbeck, Germany</p>
+      <h1>CISCO Lab Ansible</h1>
+      <p class="lead">A hands-on Linux classroom for learning to switch, route and troubleshoot on physical Cisco equipment.</p>
+      <a class="button" href="https://github.com/mail896/cisco-lab-ansible">Explore the repository ↗</a>
+    </section>
+    <figure class="desktop">
+      <a href="media/lab-08a-desktop.jpg"><img src="media/lab-08a-desktop.jpg" width="1440" height="810" alt="Live KDE desktop on LAB-08A with the Lernpfade wallpaper, taskbar and U-Zeiten classroom clock."></a>
+      <figcaption>Live desktop on LAB-08A. The U-Zeiten classroom clock sits in the open centre of the Lernpfade wallpaper.</figcaption>
+    </figure>
+    <dl class="facts"><div><dt>16</dt><dd>student workstations</dd></div><div><dt>8</dt><dd>two-seat teams</dd></div><div><dt>Debian 13</dt><dd>with KDE Plasma</dd></div></dl>
+    <section id="topology" class="split">
+      <div><p class="eyebrow">01 · The bench</p><h2>Two interfaces, two jobs</h2><p>The internal NIC stays on the IServ school network and owns the default route. A USB Ethernet adapter connects the student to a physical switch and router. Students set IPv4 and IPv6 addresses and specific routes in the lab dialog.</p><p>PuTTY and Minicom share the USB console cable safely. Wireshark captures on the lab adapter.</p></div>
+      <figure class="diagram"><a href="labornetz.en.svg"><img src="labornetz.en.svg" alt="Two student workstations connected separately to the IServ network and a Cisco switch and router topology."></a><figcaption>Network layout for one lab team.</figcaption></figure>
+    </section>
+    <figure class="network-shot">
+      <a href="media/lab-08a-network.jpg"><img src="media/lab-08a-network.jpg" width="1440" height="810" loading="lazy" alt="Live LAB-08A desktop with the Lab Network dialog open for manual addresses and routes."></a>
+      <figcaption>The live Lab Network dialog on LAB-08A. The grey values are examples for an exercise.</figcaption>
+    </figure>
+    <section id="operations" class="split operations">
+      <div><p class="eyebrow">02 · The teacher PC</p><h2>From a pilot to the whole room</h2><p>LAB-Teacher runs the dashboard. An operator previews an Ansible job, tests it on a pilot workstation and records the acceptance before deploying the same revision to the room.</p></div>
+      <ol><li><strong>Preview</strong>Review the target and tasks.</li><li><strong>Pilot</strong>Test at the workstation and record acceptance.</li><li><strong>Deploy</strong>Track each client, then retry any pending targets.</li></ol>
+    </section>
+    <section class="links"><h2>Read the implementation</h2><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/dashboard.en.md">Dashboard operations ↗</a><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/wartung-vorschau.en.md">Package maintenance ↗</a></section>
+  </main>
+  <footer class="wrap">CISCO Lab · BBS Einbeck · Project maintained by Marc Schulz</footer>
+</body>
+</html>

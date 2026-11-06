@@ -1,5 +1,7 @@
-# Local deployment assets
+# Lokale Installationsdateien
 
-Supply the approved wallpaper files, the U-Zeiten Debian package and any locally obtained Packet Tracer installer at the paths referenced by your inventory or reviewed host manifest. Verify the expected hashes and obtain software through the appropriate vendor or school distribution channel. Supply any optional Veyon public key through the local manifest. Use the dashboard image selector for the current classroom wallpaper and greeter image.
+**Deutsch** · [English](README.en.md)
 
-Runtime credentials and private key material belong on the teacher workstation. The repository includes a live desktop screenshot for documentation.
+Die freigegebenen Bilder, das U-Zeiten-Debian-Paket und einen lokal beschafften Packet-Tracer-Installer unter den Pfaden ablegen, die Inventar oder Hostmanifest vorgeben. Prüfsummen abgleichen und Software über den Hersteller beziehungsweise die schulische Bezugsquelle beziehen. Einen optionalen öffentlichen Veyon-Schlüssel im lokalen Manifest angeben. Die aktuellen Hintergrundbilder lassen sich in der Webverwaltung auswählen.
+
+Laufzeit-Zugangsdaten und private Schlüssel gehören auf den Lehrer-PC. Das Repository enthält Live-Screenshots zur Dokumentation.

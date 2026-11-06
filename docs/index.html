@@ -1,40 +1,42 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A hands-on Cisco networking classroom run with Debian, KDE, Ansible and a teacher dashboard at BBS Einbeck.">
-  <title>CISCO Lab Ansible · BBS Einbeck</title>
+  <meta name="description" content="Cisco-Netzwerkunterricht mit Debian, KDE, Ansible und einer lokalen Webverwaltung an der BBS Einbeck.">
+  <title>CISCO-LAB mit Ansible · BBS Einbeck</title>
+  <link rel="alternate" hreflang="de" href="./">
+  <link rel="alternate" hreflang="en" href="en.html">
   <link rel="stylesheet" href="site.css">
 </head>
 <body>
-  <header class="bar"><div class="wrap"><a href="./" class="mark">BBS Einbeck <span> / </span> CISCO Lab</a><nav aria-label="Project"><a href="#topology">Lab topology</a><a href="#operations">Operations</a><a href="https://github.com/mail896/cisco-lab-ansible">GitHub ↗</a></nav></div></header>
+  <header class="bar"><div class="wrap"><a href="./" class="mark">BBS Einbeck <span> / </span> CISCO Lab</a><nav aria-label="Projekt"><a href="#topology">Netzplan</a><a href="#operations">Verwaltung</a><a href="https://github.com/mail896/cisco-lab-ansible">GitHub ↗</a><a href="en.html" lang="en" hreflang="en">English</a></nav></div></header>
   <main class="wrap">
     <section class="intro">
-      <p class="eyebrow">Networking classroom · BBS Einbeck, Germany</p>
-      <h1>CISCO Lab Ansible</h1>
-      <p class="lead">A hands-on Linux classroom for learning to switch, route and troubleshoot on physical Cisco equipment.</p>
-      <a class="button" href="https://github.com/mail896/cisco-lab-ansible">Explore the repository ↗</a>
+      <p class="eyebrow">Netzwerklabor · BBS Einbeck</p>
+      <h1>CISCO-LAB mit Ansible</h1>
+      <p class="lead">Ein Linux-Labor für Switching, Routing und Fehlersuche an echten Cisco-Geräten.</p>
+      <a class="button" href="https://github.com/mail896/cisco-lab-ansible">Zum Repository ↗</a>
     </section>
     <figure class="desktop">
-      <a href="media/lab-08a-desktop.jpg"><img src="media/lab-08a-desktop.jpg" width="1440" height="810" alt="Live KDE desktop on LAB-08A with the Lernpfade wallpaper, taskbar and U-Zeiten classroom clock."></a>
-      <figcaption>Live desktop on LAB-08A. The U-Zeiten classroom clock sits in the open centre of the Lernpfade wallpaper.</figcaption>
+      <a href="media/lab-08a-desktop.jpg"><img src="media/lab-08a-desktop.jpg" width="1440" height="810" alt="KDE-Desktop von LAB-08A mit Lernpfade-Hintergrund, Kontrollleiste und Unterrichtsuhr."></a>
+      <figcaption>Live-Desktop von LAB-08A. In der freien Mitte des Lernpfade-Hintergrunds steht die U-Zeiten-Uhr.</figcaption>
     </figure>
-    <dl class="facts"><div><dt>16</dt><dd>student workstations</dd></div><div><dt>8</dt><dd>two-seat teams</dd></div><div><dt>Debian 13</dt><dd>with KDE Plasma</dd></div></dl>
+    <dl class="facts"><div><dt>16</dt><dd>Schüler-PCs</dd></div><div><dt>8</dt><dd>Zweierteams</dd></div><div><dt>Debian 13</dt><dd>mit KDE Plasma</dd></div></dl>
     <section id="topology" class="split">
-      <div><p class="eyebrow">01 · The bench</p><h2>Two interfaces, two jobs</h2><p>The internal NIC stays on the IServ school network and owns the default route. A USB Ethernet adapter connects the student to a physical switch and router. Students set IPv4 and IPv6 addresses and specific routes in the lab dialog.</p><p>PuTTY and Minicom share the USB console cable safely. Wireshark captures on the lab adapter.</p></div>
-      <figure class="diagram"><a href="labornetz.svg"><img src="labornetz.svg" alt="Two student workstations connected separately to the IServ network and a Cisco switch and router topology."></a><figcaption>Network layout for one lab team.</figcaption></figure>
+      <div><p class="eyebrow">01 · Der Teamplatz</p><h2>Zwei Anschlüsse für zwei Netze</h2><p>Die interne Netzwerkkarte bleibt mit dem IServ-Schulnetz verbunden und führt die Standardroute. Über den USB-Ethernet-Adapter erreichen die Schüler ihre Switches und Router. IPv4- und IPv6-Adressen sowie gezielte Routen stellen sie im Labornetz-Dialog ein.</p><p>PuTTY und Minicom teilen sich den Zugriff auf das USB-Konsolenkabel. Wireshark schneidet auf dem Laboradapter mit.</p></div>
+      <figure class="diagram"><a href="labornetz.svg"><img src="labornetz.svg" alt="Zwei Schüler-PCs mit separater Verbindung zum IServ-Schulnetz und zu Cisco-Switches und -Routern."></a><figcaption>Netzplan für ein LAB-Team.</figcaption></figure>
     </section>
     <figure class="network-shot">
-      <a href="media/lab-08a-network.jpg"><img src="media/lab-08a-network.jpg" width="1440" height="810" loading="lazy" alt="Live LAB-08A desktop with the Lab Network dialog open for manual addresses and routes."></a>
-      <figcaption>The live Lab Network dialog on LAB-08A. The grey values are examples for an exercise.</figcaption>
+      <a href="media/lab-08a-network.jpg"><img src="media/lab-08a-network.jpg" width="1440" height="810" loading="lazy" alt="Live-Desktop von LAB-08A mit geöffnetem Labornetz-Dialog für manuelle Adressen und Routen."></a>
+      <figcaption>Labornetz-Dialog auf LAB-08A. Die grauen Werte sind Übungsbeispiele.</figcaption>
     </figure>
     <section id="operations" class="split operations">
-      <div><p class="eyebrow">02 · The teacher PC</p><h2>From a pilot to the whole room</h2><p>LAB-Teacher runs the dashboard. An operator previews an Ansible job, tests it on a pilot workstation and records the acceptance before deploying the same revision to the room.</p></div>
-      <ol><li><strong>Preview</strong>Review the target and tasks.</li><li><strong>Pilot</strong>Test at the workstation and record acceptance.</li><li><strong>Deploy</strong>Track each client, then retry any pending targets.</li></ol>
+      <div><p class="eyebrow">02 · Der Lehrer-PC</p><h2>Vom Pilotclient in den ganzen Raum</h2><p>Auf LAB-Teacher läuft die Webverwaltung. Lehrkräfte prüfen eine Ansible-Aufgabe, testen sie an einem Pilotclient und geben denselben Stand anschließend für den Raum frei.</p></div>
+      <ol><li><strong>Vorschau</strong>Zielrechner und Aufgaben prüfen.</li><li><strong>Pilot</strong>Am Arbeitsplatz testen und Abnahme eintragen.</li><li><strong>Rollout</strong>Ergebnisse verfolgen und offene Clients nachholen.</li></ol>
     </section>
-    <section class="links"><h2>Read the implementation</h2><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/dashboard.md">Dashboard operations ↗</a><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/wartung-vorschau.md">Package maintenance ↗</a></section>
+    <section class="links"><h2>Betriebsdokumentation</h2><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/dashboard.md">Webverwaltung ↗</a><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/wartung-vorschau.md">Paketwartung ↗</a></section>
   </main>
-  <footer class="wrap">CISCO Lab · BBS Einbeck · Project maintained by Marc Schulz</footer>
+  <footer class="wrap">CISCO-LAB · BBS Einbeck · Projektbetreuung durch Marc Schulz</footer>
 </body>
 </html>

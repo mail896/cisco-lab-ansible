@@ -1,33 +1,30 @@
-Lab network authorisation
+Berechtigungen im LAB-Netz
+English: architecture.en.txt
 
-The school and exercise interfaces have separate purposes. The internal NIC
-uses the school connection, its default route and DNS. The USB Ethernet
-adapter connects to the student's physical network exercise.
+Die interne Netzwerkkarte führt ins Schulnetz und stellt Standardroute
+und DNS bereit. Der USB-Ethernet-Adapter verbindet den Rechner mit der
+physischen Netzwerkübung.
 
-NetworkManager's general Polkit write action does not carry a connection
-UUID in the checked 1.52.1 source. The classroom group therefore uses a
-limited dialog and root broker for changes to the USB lab interface.
-See the NetworkManager authorisation and connection-update source:
-https://github.com/NetworkManager/NetworkManager/blob/1.52.1/src/core/nm-auth-manager.c#L369
-https://github.com/NetworkManager/NetworkManager/blob/1.52.1/src/core/settings/nm-settings-connection.c#L1735
+In der geprüften NetworkManager-Version 1.52.1 übergibt die allgemeine
+Polkit-Schreibaktion keine Verbindungs-UUID. Deshalb verwenden Schüler
+für Änderungen am USB-Anschluss einen begrenzten Dialog und einen
+privilegierten Vermittlungsdienst.
 
-The Unix socket identifies callers through kernel peer credentials. The
-broker validates group membership and the active local logind session.
-A root-managed manifest identifies the school and lab adapters by profile
-and hardware. The dialog cannot choose arbitrary adapters, file paths,
-profile identifiers, DNS settings or shell commands.
+Der Unix-Socket identifiziert Aufrufer anhand der vom Kernel gelieferten
+Peer-Credentials. Der Dienst prüft die LAB-Gruppe und die aktive lokale
+logind-Sitzung. Ein von root verwaltetes Manifest ordnet die beiden
+Anschlüsse anhand von Profil und Hardware zu. Der Dialog kann weder
+beliebige Zieladapter und Pfade noch DNS-Werte und Befehle vorgeben.
 
-Lab requests use manual IPv4 and IPv6 addresses and specific routes.
-Default routes and routes overlapping protected school networks are
-rejected. Validate the real school, DNS and management prefixes in the
-manifest when commissioning a new host. A specific route to an unprotected
-destination is part of the lab exercise and can redirect that traffic.
+Zulässig sind manuelle IPv4- und IPv6-Adressen und gezielte Routen.
+Standardrouten und Überlappungen mit geschützten Schulnetzen werden
+abgelehnt. Bei der Inbetriebnahme die tatsächlichen Schul-, DNS- und
+Verwaltungsnetze im Manifest prüfen. Eine gezielte Route zu einem
+ungeschützten Ziel kann den betreffenden Verkehr ins LAB lenken.
 
-The broker serialises application, recovery and login reset. The recovery
-loop restores the school path and a missing lab profile, while allowing
-students to retain exercise values within their active session. A new
-classroom login resets the lab configuration. Review school connectivity,
-identity matching, rollback and exercise routes on a pilot client before
-extending the configuration to a room.
+Der Dienst serialisiert Änderungen, Wiederherstellung und Login-Reset.
+Die Heilung hält den Schulanschluss und das Laborprofil verfügbar. Eine
+neue LAB-Anmeldung setzt die Übungswerte zurück. Schulverbindung,
+Gerätezuordnung, Rückweg und Übungsrouten auf dem Pilotclient prüfen.
 
-See ../broker/, ../dialog/ and ../../docs/dashboard.md.
+Siehe ../broker/, ../dialog/ und ../../docs/dashboard.md.
