@@ -56,6 +56,10 @@
       - /etc/cisco-lab/xdg/autostart/lab-wallpaper.desktop
       - /etc/cisco-lab/xdg/autostart/lab-kde-session-cleanup.desktop
       - /usr/share/applications/u-zeiten.desktop
+      - /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/metadata.json
+      - /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/contents/defaults
+      - /usr/share/wallpapers/CiscoLab/metadata.json
+      - /usr/share/wallpapers/CiscoLab/contents/images/1920x1080.png
 
 - name: Systemdateien vor der ersten Aenderung sichern
   ansible.builtin.command:
@@ -150,6 +154,9 @@
     owner: root
     group: root
     mode: '0644'
+
+- name: LAB-Standardbild und symbolfreie Arbeitsfläche für neue Plasma-Profile bereitstellen
+  ansible.builtin.import_tasks: theme.yml
 
 - name: Konkurrierende Autostarts ausschliesslich fuer LAB-Benutzer ueberlagern
   ansible.builtin.copy:

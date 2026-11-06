@@ -31,6 +31,12 @@ Für dieses LAB fiel die Wahl bewusst auf eine eigene Oberfläche anstelle von S
 
 Der Bilddeploy prüft SHA-256, Eigentümer, Dateirechte und die relevanten KDE- und SDDM-Einstellungen. Bei vollständiger Übereinstimmung entfallen Übertragung und Sicherung. Bei Änderungen sichert der Lauf den vorherigen Stand und überträgt jede geänderte Bilddatei einmal. Die Kopie des eingespielten Bilds in der Sicherung entsteht lokal auf dem Client. Ein sofortiger Greeter-Neustart setzt eine freie Konsole voraus. Das Desktopbild erscheint in der nächsten KDE-Sitzung.
 
+## IServ-Desktop und Hintergrundbild
+
+Die LAB-Gruppe erhält ihr KDE-Standarddesign schon beim Sitzungsstart. Der Desktop-Helfer stellt vorhandene Plasma-Arbeitsflächen auf die reine Desktop-Ansicht um. Dadurch bleiben Dateien in `Files/Desktop` über den Dateimanager erreichbar und erscheinen ohne Symbole auf dem Desktop. Das Kontextmenü der Arbeitsfläche ist für LAB-Sitzungen gesperrt. Die Vorgabe greift bei der nächsten Anmeldung.
+
+Für bestehende Clients gibt es ein gezielt freizugebendes [Korrektur-Playbook](../block01-desktop-first-login.yml). Die Baseline verwendet dieselbe Plasma-Bildvorgabe.
+
 ## Neuinstallation
 
 1. Das Debian-13-Image mit KDE über IServ installieren. Die interne Netzwerkkarte braucht die Schul-IP und die Standardroute.

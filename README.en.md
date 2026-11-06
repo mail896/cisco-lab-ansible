@@ -6,7 +6,7 @@ Ansible automation and a teacher-operated dashboard for the Linux networking cla
 
 [Project website and screenshots](https://mail896.github.io/cisco-lab-ansible/en.html) · [Operations guide](docs/dashboard.en.md) · [Maintenance guide](docs/wartung-vorschau.en.md)
 
-![Live KDE desktop on LAB-08A, showing the classroom clock](docs/media/lab-08a-desktop.jpg)
+![Live KDE desktop on LAB-08B, showing the classroom clock](docs/media/lab-08b-desktop.jpg)
 
 ## A dashboard built for this lab
 
@@ -22,7 +22,7 @@ Each student workstation has an internal Ethernet interface for the school netwo
 
 The local dashboard on LAB-Teacher provides pilot deployments, approval before room-wide deployment, image selection, room actions and encrypted backups. Pilot and room deployments keep run logs. The local classroom account is configured independently of IServ and is deliberately provisioned without SSH access.
 
-[Lab topology](docs/labornetz.en.svg) · [Live Lab Network dialog](docs/media/lab-08a-network.jpg)
+[Lab topology](docs/labornetz.en.svg) · [Live Lab Network dialog](docs/media/lab-08b-network.jpg)
 
 ## Repository guide
 

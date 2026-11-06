@@ -20,7 +20,7 @@ PILOTS = {name: LAB_TARGETS[name] for name in ('LAB-08A', 'LAB-08B')}
 CISCO_PRIVATE = Path('local-private/cisco-account-vars.json')
 CISCO_FILES = ('tasks/local-cisco.py', 'tasks/local-cisco-nss.c',
                'tasks/local-cisco-runtime.py',
-               'tasks/cisco-wallpaper.yml', str(CISCO_PRIVATE))
+               'tasks/cisco-wallpaper.yml', 'roles/lab_desktop/tasks/theme.yml', str(CISCO_PRIVATE))
 IMAGE_CURRENT = 'LAB-Bildstand bereits vollständig installiert.'
 GREETER_CURRENT = 'SDDM hat den aktuellen Bildstand bereits geladen.'
 APPEARANCE_PROBE = 'dashboard/appearance-current.py'

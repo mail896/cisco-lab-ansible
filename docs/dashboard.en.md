@@ -31,6 +31,12 @@ The lab deliberately uses its own dashboard instead of Semaphore. It follows the
 
 Image deployment checks SHA-256, ownership, file permissions and the relevant KDE and SDDM settings. A matching client skips image transfers and snapshots. On a change, the previous files are snapshotted. Each changed image is sent once and copied into the run's backup on the client. An immediate greeter refresh requires a free local console. The existing desktop session sees a new wallpaper at its next sign-in.
 
+## IServ desktop and wallpaper
+
+The LAB group gets the KDE theme at session startup. The desktop helper converts existing Plasma layouts to the plain desktop view. Files in `Files/Desktop` remain available in the file manager, and the desktop stays clear of file icons. The desktop context menu is locked in LAB sessions. These settings take effect at the next sign-in.
+
+For existing workstations, a [targeted correction playbook](../block01-desktop-first-login.yml) requires explicit target approval. The baseline uses the same Plasma wallpaper defaults.
+
 ## Fresh installation
 
 1. Install the Debian 13 KDE image through IServ. The internal network adapter must carry the school DHCP address and default route.

@@ -6,7 +6,7 @@ Ansible und eine lokale Webverwaltung für den Linux-Netzwerkunterricht an der B
 
 [Projektseite und Screenshots](https://mail896.github.io/cisco-lab-ansible/) · [Betriebsanleitung](docs/dashboard.md) · [Paketwartung](docs/wartung-vorschau.md)
 
-![KDE-Desktop von LAB-08A mit der Unterrichtsuhr](docs/media/lab-08a-desktop.jpg)
+![KDE-Desktop von LAB-08B mit der Unterrichtsuhr](docs/media/lab-08b-desktop.jpg)
 
 ## Die eigene LAB-Webverwaltung
 
@@ -22,7 +22,7 @@ Die interne Netzwerkkarte hält die Verbindung zum IServ-Schulnetz und die Stand
 
 Auf LAB-Teacher können Lehrkräfte Ansible-Aufgaben prüfen, auf einem Pilotrechner ausführen und nach Sichttest für den Raum freigeben. Die Webverwaltung bietet außerdem Desktopbilder, Sammelaktionen und verschlüsselte Sicherungen. Das lokale Sammelkonto wird unabhängig von IServ eingerichtet und hat keinen SSH-Zugang.
 
-[Netzplan](docs/labornetz.svg) · [Live-Screenshot des Labornetz-Dialogs](docs/media/lab-08a-network.jpg)
+[Netzplan](docs/labornetz.svg) · [Live-Screenshot des Labornetz-Dialogs](docs/media/lab-08b-network.jpg)
 
 ## Dateien im Repository
 
