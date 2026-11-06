@@ -38,3 +38,9 @@ footer { border-top:1px solid var(--line); padding:1.25rem 0 2rem; color:var(--m
 @media (max-width:650px) { .split { grid-template-columns:1fr; } .wrap { width:calc(100% - 1.75rem); } .facts div { padding:.6rem .35rem; } }
 @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
 .network-shot { margin:1.4rem auto 0; width:min(100%,56rem); }
+.dashboard { padding:clamp(2.3rem,6vw,5rem) 0; border-bottom:1px solid var(--line); }
+.dashboard > p:not(.eyebrow) { max-width:52rem; }
+.dashboard-gallery { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.4rem; margin:1.5rem 0; }
+.dashboard-gallery figure:first-child { grid-column:1/-1; max-width:54rem; }
+.dashboard-gallery strong { color:var(--ink); }
+@media (max-width:650px) { .dashboard-gallery { grid-template-columns:1fr; } }

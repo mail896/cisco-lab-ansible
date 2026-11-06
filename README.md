@@ -8,6 +8,14 @@ Ansible und eine lokale Webverwaltung für den Linux-Netzwerkunterricht an der B
 
 ![KDE-Desktop von LAB-08A mit der Unterrichtsuhr](docs/media/lab-08a-desktop.jpg)
 
+## Die eigene LAB-Webverwaltung
+
+Für dieses LAB fiel die Wahl bewusst auf eine eigene Oberfläche anstelle von Semaphore. Sie bildet den Ablauf im Unterricht ab. Lehrkräfte wählen geprüfte Aufgaben und konkrete Zielrechner, testen auf LAB-08A oder LAB-08B und geben genau den geprüften Stand für den Raum frei.
+
+![CISCO-LAB · Pilotdeploys](docs/media/dashboard-pilots.jpg)
+
+[Übersicht](docs/media/dashboard-overview.jpg) · [Pilotdeploys](docs/media/dashboard-pilots.jpg) · [Desktopbilder](docs/media/dashboard-images.jpg)
+
 ## So arbeitet das LAB
 
 Die interne Netzwerkkarte hält die Verbindung zum IServ-Schulnetz und die Standardroute. Die USB-Netzwerkkarte führt ins Übungsnetz. Schüler richten dort manuelle IPv4- und IPv6-Adressen sowie gezielte Routen über den Labornetz-Dialog ein. Ein Dienst prüft die Eingaben und wendet sie ausschließlich auf den zugeordneten USB-Adapter an. Wireshark schneidet dort mit. PuTTY und Minicom koordinieren den Zugriff auf das serielle Konsolenkabel.
@@ -37,3 +45,5 @@ ansible-playbook -i inventory.example.ini --limit LAB-08B --list-tasks fresh-cli
 ```
 
 Für den Betrieb ein LAB-Inventar verwenden und SSH-Fingerabdruck sowie interne Netzwerkkarte prüfen. Änderungen zuerst auf einem einzelnen Pilotclient testen. Laufzeit-Zugangsdaten, Schlüssel, Geräte-Manifeste, verschlüsselte Sicherungen, Herstellerpakete und das versionsgebundene Winbind-Modul werden lokal bereitgestellt. Die Playbooks verwalten LAB-Teacher und die LAB-Clients. Der zentrale IServ-Server wird separat verwaltet.
+
+Bei veröffentlichten Projektupdates beide Sprachfassungen und bei sichtbaren Änderungen die betroffenen Screenshots gemeinsam aktualisieren.

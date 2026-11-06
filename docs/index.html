@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="site.css">
 </head>
 <body>
-  <header class="bar"><div class="wrap"><a href="./" class="mark">BBS Einbeck <span> / </span> CISCO Lab</a><nav aria-label="Projekt"><a href="#topology">Netzplan</a><a href="#operations">Verwaltung</a><a href="https://github.com/mail896/cisco-lab-ansible">GitHub ↗</a><a href="en.html" lang="en" hreflang="en">English</a></nav></div></header>
+  <header class="bar"><div class="wrap"><a href="./" class="mark">BBS Einbeck <span> / </span> CISCO Lab</a><nav aria-label="Projekt"><a href="#topology">Netzplan</a><a href="#operations">Verwaltung</a><a href="https://github.com/mail896/cisco-lab-ansible">GitHub ↗</a><a href="#dashboard">Dashboard</a><a href="en.html" lang="en" hreflang="en">English</a></nav></div></header>
   <main class="wrap">
     <section class="intro">
       <p class="eyebrow">Netzwerklabor · BBS Einbeck</p>
@@ -34,6 +34,17 @@
     <section id="operations" class="split operations">
       <div><p class="eyebrow">02 · Der Lehrer-PC</p><h2>Vom Pilotclient in den ganzen Raum</h2><p>Auf LAB-Teacher läuft die Webverwaltung. Lehrkräfte prüfen eine Ansible-Aufgabe, testen sie an einem Pilotclient und geben denselben Stand anschließend für den Raum frei.</p></div>
       <ol><li><strong>Vorschau</strong>Zielrechner und Aufgaben prüfen.</li><li><strong>Pilot</strong>Am Arbeitsplatz testen und Abnahme eintragen.</li><li><strong>Rollout</strong>Ergebnisse verfolgen und offene Clients nachholen.</li></ol>
+    </section>
+    <section id="dashboard" class="dashboard">
+      <p class="eyebrow">03 · Live aus dem Lehrer-PC</p>
+      <h2>Die eigene LAB-Webverwaltung</h2>
+      <p>Für dieses LAB fiel die Wahl bewusst auf eine eigene Oberfläche anstelle von Semaphore. Sie bildet den Ablauf im Unterricht ab. Lehrkräfte wählen geprüfte Aufgaben und konkrete Zielrechner, testen auf LAB-08A oder LAB-08B und geben genau den geprüften Stand für den Raum frei.</p>
+      <div class="dashboard-gallery">
+        <figure><a href="media/dashboard-overview.jpg"><img src="media/dashboard-overview.jpg" width="1280" height="720" loading="lazy" alt="Übersicht · CISCO-LAB"></a><figcaption><strong>Übersicht.</strong> Clientzustand und letzte Wartungsvorschau für alle 16 Rechner.</figcaption></figure>
+        <figure><a href="media/dashboard-pilots.jpg"><img src="media/dashboard-pilots.jpg" width="1265" height="712" loading="lazy" alt="Pilotdeploys · CISCO-LAB"></a><figcaption><strong>Pilotdeploys.</strong> Testclient und Auftrag wählen, Aufgaben vorab prüfen und die praktische Abnahme mit dem Laufprotokoll festhalten.</figcaption></figure>
+        <figure><a href="media/dashboard-images.jpg"><img src="media/dashboard-images.jpg" width="1265" height="712" loading="lazy" alt="Desktopbilder · CISCO-LAB"></a><figcaption><strong>Desktopbilder.</strong> KDE-Hintergrund und SDDM-Anmeldebild auswählen. Die Raumverteilung zeigt das Ergebnis je Client.</figcaption></figure>
+      </div>
+      <p>Zum selben Arbeitsablauf gehören die Aufnahme eines frisch installierten Clients, Sammelaktionen für die Klasse, APT-Wartung mit Sitzungsschutz und verschlüsselte Sicherungen.</p>
     </section>
     <section class="links"><h2>Betriebsdokumentation</h2><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/dashboard.md">Webverwaltung ↗</a><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/wartung-vorschau.md">Paketwartung ↗</a></section>
   </main>

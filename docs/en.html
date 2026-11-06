@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="site.css">
 </head>
 <body>
-  <header class="bar"><div class="wrap"><a href="en.html" class="mark">BBS Einbeck <span> / </span> CISCO Lab</a><nav aria-label="Project"><a href="#topology">Lab topology</a><a href="#operations">Operations</a><a href="https://github.com/mail896/cisco-lab-ansible">GitHub ↗</a><a href="./" lang="de" hreflang="de">Deutsch</a></nav></div></header>
+  <header class="bar"><div class="wrap"><a href="en.html" class="mark">BBS Einbeck <span> / </span> CISCO Lab</a><nav aria-label="Project"><a href="#topology">Lab topology</a><a href="#operations">Operations</a><a href="https://github.com/mail896/cisco-lab-ansible">GitHub ↗</a><a href="#dashboard">Dashboard</a><a href="./" lang="de" hreflang="de">Deutsch</a></nav></div></header>
   <main class="wrap">
     <section class="intro">
       <p class="eyebrow">Networking classroom · BBS Einbeck, Germany</p>
@@ -34,6 +34,17 @@
     <section id="operations" class="split operations">
       <div><p class="eyebrow">02 · The teacher PC</p><h2>From a pilot to the whole room</h2><p>LAB-Teacher runs the dashboard. An operator previews an Ansible job, tests it on a pilot workstation and records the acceptance before deploying the same revision to the room.</p></div>
       <ol><li><strong>Preview</strong>Review the target and tasks.</li><li><strong>Pilot</strong>Test at the workstation and record acceptance.</li><li><strong>Deploy</strong>Track each client, then retry any pending targets.</li></ol>
+    </section>
+    <section id="dashboard" class="dashboard">
+      <p class="eyebrow">03 · Live from the teacher PC</p>
+      <h2>A dashboard built for this lab</h2>
+      <p>The lab deliberately uses its own dashboard instead of Semaphore. It follows the classroom workflow. Teachers select reviewed jobs and specific workstations, test on LAB-08A or LAB-08B, then release that same revision to the room.</p>
+      <div class="dashboard-gallery">
+        <figure><a href="media/dashboard-overview.jpg"><img src="media/dashboard-overview.jpg" width="1280" height="720" loading="lazy" alt="Overview · CISCO-LAB"></a><figcaption><strong>Overview.</strong> Client status and the latest maintenance preview for all 16 workstations.</figcaption></figure>
+        <figure><a href="media/dashboard-pilots.jpg"><img src="media/dashboard-pilots.jpg" width="1265" height="712" loading="lazy" alt="Pilot deployments · CISCO-LAB"></a><figcaption><strong>Pilot deployments.</strong> Select a test workstation and job, preview the tasks and record the practical acceptance alongside the run log.</figcaption></figure>
+        <figure><a href="media/dashboard-images.jpg"><img src="media/dashboard-images.jpg" width="1265" height="712" loading="lazy" alt="Desktop images · CISCO-LAB"></a><figcaption><strong>Desktop images.</strong> Select the KDE wallpaper and SDDM login image. The room deployment reports the result for each workstation.</figcaption></figure>
+      </div>
+      <p>The same dashboard handles admission of freshly installed workstations, classroom actions, session-aware APT maintenance and encrypted backups.</p>
     </section>
     <section class="links"><h2>Read the implementation</h2><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/dashboard.en.md">Dashboard operations ↗</a><a href="https://github.com/mail896/cisco-lab-ansible/blob/main/docs/wartung-vorschau.en.md">Package maintenance ↗</a></section>
   </main>

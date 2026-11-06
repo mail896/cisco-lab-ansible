@@ -14,6 +14,14 @@ python3 -B -m dashboard.server \
 
 The variables point to the private maintenance report and the separately verified SSH host-key file for LAB-08B. Open `http://127.0.0.1:8765` on LAB-Teacher.
 
+## A dashboard built for this lab
+
+The lab deliberately uses its own dashboard instead of Semaphore. It follows the classroom workflow. Teachers select reviewed jobs and specific workstations, test on LAB-08A or LAB-08B, then release that same revision to the room.
+
+- Client status and the latest maintenance preview for all 16 workstations. [Overview](media/dashboard-overview.jpg)
+- Select a test workstation and job, preview the tasks and record the practical acceptance alongside the run log. [Pilot deployments](media/dashboard-pilots.jpg)
+- Select the KDE wallpaper and SDDM login image. The room deployment reports the result for each workstation. [Desktop images](media/dashboard-images.jpg)
+
 ## Pilot, review and release
 
 1. Choose an operation and one test workstation, LAB-08A or LAB-08B.

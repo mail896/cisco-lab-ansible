@@ -14,6 +14,14 @@ python3 -B -m dashboard.server \
 
 Die Variablen bezeichnen den privaten lokalen Wartungsbericht und die separat geprüfte SSH-Hostdatei für LAB-08B. Der Dienst ist lokal unter `http://127.0.0.1:8765` erreichbar.
 
+## Die eigene LAB-Webverwaltung
+
+Für dieses LAB fiel die Wahl bewusst auf eine eigene Oberfläche anstelle von Semaphore. Sie bildet den Ablauf im Unterricht ab. Lehrkräfte wählen geprüfte Aufgaben und konkrete Zielrechner, testen auf LAB-08A oder LAB-08B und geben genau den geprüften Stand für den Raum frei.
+
+- Clientzustand und letzte Wartungsvorschau für alle 16 Rechner. [Übersicht](media/dashboard-overview.jpg)
+- Testclient und Auftrag wählen, Aufgaben vorab prüfen und die praktische Abnahme mit dem Laufprotokoll festhalten. [Pilotdeploys](media/dashboard-pilots.jpg)
+- KDE-Hintergrund und SDDM-Anmeldebild auswählen. Die Raumverteilung zeigt das Ergebnis je Client. [Desktopbilder](media/dashboard-images.jpg)
+
 ## Pilot, Abnahme und Raumdeploy
 
 1. Aufgabe und einen Pilotclient auswählen, LAB-08A oder LAB-08B.

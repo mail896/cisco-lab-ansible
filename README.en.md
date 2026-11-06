@@ -8,6 +8,14 @@ Ansible automation and a teacher-operated dashboard for the Linux networking cla
 
 ![Live KDE desktop on LAB-08A, showing the classroom clock](docs/media/lab-08a-desktop.jpg)
 
+## A dashboard built for this lab
+
+The lab deliberately uses its own dashboard instead of Semaphore. It follows the classroom workflow. Teachers select reviewed jobs and specific workstations, test on LAB-08A or LAB-08B, then release that same revision to the room.
+
+![CISCO-LAB · Pilot deployments](docs/media/dashboard-pilots.jpg)
+
+[Overview](docs/media/dashboard-overview.jpg) · [Pilot deployments](docs/media/dashboard-pilots.jpg) · [Desktop images](docs/media/dashboard-images.jpg)
+
 ## How the lab works
 
 Each student workstation has an internal Ethernet interface for the school network and a USB Ethernet interface for exercises. The school interface keeps IServ access and the default route. Students configure static IPv4 and IPv6 addresses and specific routes through the Lab Network dialog. A privileged service checks and applies changes to the assigned USB adapter. Wireshark capture is scoped to that adapter, and the serial launchers coordinate access to the Cisco console cable.
@@ -41,3 +49,5 @@ Repository material covers the LAB clients and LAB-Teacher. The central IServ se
 ansible-playbook -i inventory.example.ini --syntax-check fresh-client.yml
 ansible-playbook -i inventory.example.ini --limit LAB-08B --list-tasks fresh-client.yml
 ```
+
+For published project updates, update both language editions and refresh the affected screenshots when the interface changes.
