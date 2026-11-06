@@ -1,0 +1,121 @@
+---
+- name: Lokales Sammelkonto für einen ausdrücklich ausgewählten LAB-Client
+  hosts: cisco_lab
+  gather_facts: false
+  become: true
+  serial: 1
+  pre_tasks:
+    - name: Ein einzelnes ausdrücklich bestätigtes LAB-Ziel verlangen
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts_all == [lab_cisco_host | default('')]
+          - inventory_hostname is match('^LAB-0[1-8][AB]$')
+          - ansible_host == ('10.255.40.' ~ (((inventory_hostname[4:6] | int) - 1) * 2 + (1 if inventory_hostname[-1] == 'A' else 2)))
+          - lab_cisco_allow_shadow | default(false) | bool
+  tasks:
+    - name: Konto ausschließlich auf freiem Client mit geprüfter Identität vorbereiten
+      ansible.builtin.raw: |
+        /usr/bin/python3 -IB - {{ inventory_hostname | quote }} <<'PY'
+        import socket,subprocess,sys
+        if socket.gethostname()!=sys.argv[1]:
+            raise SystemExit('Falsches Ziel.')
+        for row in subprocess.check_output(['loginctl','list-sessions','--no-legend'],text=True).splitlines():
+            fields=dict(line.split('=',1) for line in subprocess.check_output(
+                ['loginctl','show-session',row.split()[0],'-p','Class','-p','Service'],text=True).splitlines())
+            if not fields.get('Class') or (fields['Class'].startswith('user') and fields.get('Service')!='sshd'):
+                raise SystemExit('Lokale Sitzung aktiv oder nicht eindeutig.')
+        mounts=subprocess.check_output(['findmnt','-n','-o','TARGET'],text=True)
+        if any(path.startswith('/var/lib/iserv/client/home/') for path in mounts.splitlines()):
+            raise SystemExit('IServ-Home ist noch eingebunden.')
+        PY
+      changed_when: false
+
+    - name: Zielarchitektur für das lokale NSS-Modul prüfen
+      ansible.builtin.raw: test "$(uname -m)" = x86_64
+      changed_when: false
+
+    - name: Privates Build-Verzeichnis auf LAB-Teacher anlegen
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: lab-cisco-nss-
+      delegate_to: localhost
+      become: false
+      register: lab_cisco_build
+
+    - name: NSS-Modul und Sammelkonto gemeinsam bereitstellen
+      block:
+        - name: Auf die Identität begrenztes NSS-Modul lokal bauen
+          ansible.builtin.command:
+            argv:
+              - /usr/bin/cc
+              - -std=c11
+              - -Wall
+              - -Wextra
+              - -Werror
+              - -fPIC
+              - -shared
+              - -Wl,-z,relro,-z,now
+              - -o
+              - "{{ lab_cisco_build.path }}/libnss_lab_cisco.so.2"
+              - "{{ playbook_dir }}/tasks/local-cisco-nss.c"
+          delegate_to: localhost
+          become: false
+
+        - name: Geprüftes Modul für die lokale Einrichtung bereitstellen
+          ansible.builtin.copy:
+            src: "{{ lab_cisco_build.path }}/libnss_lab_cisco.so.2"
+            dest: "/var/tmp/{{ lab_cisco_build.path | basename }}.so"
+            owner: root
+            group: root
+            mode: '0600'
+
+        - name: Lokales Konto, Sitzungsregeln und SSH-Sperre eingerichtet halten
+          ansible.builtin.command:
+            argv:
+              - /usr/bin/python3
+              - -IB
+              - -c
+              - "{{ lookup('ansible.builtin.file', playbook_dir + '/tasks/local-cisco.py') }}"
+            stdin: >-
+              {{ {'hash': lab_cisco_password_hash, 'allow_shadow': (lab_cisco_allow_shadow | bool),
+                  'library': '/var/tmp/' + (lab_cisco_build.path | basename) + '.so'} | to_json }}
+          no_log: true
+      always:
+        - name: Temporäre Moduldatei am Client entfernen
+          ansible.builtin.file:
+            path: "/var/tmp/{{ lab_cisco_build.path | basename }}.so"
+            state: absent
+        - name: Temporäres Build-Verzeichnis auf LAB-Teacher entfernen
+          ansible.builtin.file:
+            path: "{{ lab_cisco_build.path }}"
+            state: absent
+          delegate_to: localhost
+          become: false
+
+    - name: Vorhandene LAB-Laufzeitpfade für USB-Konsole und Mitschnitt prüfen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir + '/tasks/local-cisco-runtime.py') }}"
+
+    - name: Lokale Identität, LAB-Gruppe und SSH-Ausschluss prüfen
+      ansible.builtin.raw: |
+        /usr/bin/python3 -IB - <<'PY'
+        import grp,json,os,pwd,subprocess
+        from pathlib import Path
+        account=pwd.getpwnam('cisco')
+        gid=grp.getgrnam('cisco.lab').gr_gid
+        marker=json.loads(Path('/etc/cisco-lab/local-cisco.json').read_text())
+        assert 400<=account.pw_uid<500 and account.pw_gid==gid
+        assert marker=={'uid':account.pw_uid,'gid':gid}
+        assert set(os.getgrouplist('cisco',gid))=={gid}
+        assert account.pw_dir=='/var/lib/cisco-lab-local/cisco'
+        assert 'denyusers cisco' in subprocess.check_output(['/usr/sbin/sshd','-T'],text=True).splitlines()
+        print('Lokales Sammelkonto mit LAB-Gruppe geprüft. Passwort-Anmeldung an der Konsole separat testen.')
+        PY
+      changed_when: false
+
+    - name: Bildvorgabe für das lokale cisco-Profil installieren
+      ansible.builtin.import_tasks: tasks/cisco-wallpaper.yml

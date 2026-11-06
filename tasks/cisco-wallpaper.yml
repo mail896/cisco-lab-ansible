@@ -1,0 +1,82 @@
+---
+- name: Verzeichnisse für die Plasma-Bildvorgabe anlegen
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/contents
+    - /usr/share/wallpapers/CiscoLab/contents/images
+
+- name: KDE-Pakete für die Bildvorgabe registrieren
+  ansible.builtin.copy:
+    dest: "{{ item }}/metadata.json"
+    owner: root
+    group: root
+    mode: '0644'
+    content: "{{ {'KPlugin': {'Id': item | basename, 'Name': 'CISCO-LAB'}} | to_nice_json }}"
+  loop:
+    - /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab
+    - /usr/share/wallpapers/CiscoLab
+
+- name: Debian-Plasma-Design mit dem LAB-Standardbild übernehmen
+  ansible.builtin.copy:
+    dest: /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/contents/defaults
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [kdeglobals][KDE]
+      widgetStyle=Breeze
+
+      [kdeglobals][General]
+      ColorScheme=BreezeLight
+
+      [kdeglobals][Icons]
+      Theme=breeze
+
+      [plasmarc][Theme]
+      name=breeze-dark
+
+      [Wallpaper]
+      Image=CiscoLab
+
+      [kcminputrc][Mouse]
+      cursorTheme=breeze_cursors
+
+      [kwinrc][org.kde.kdecoration2]
+      library=org.kde.breeze
+      theme=Breeze
+
+      [KSplash]
+      Theme=org.kde.Breeze
+
+- name: KDE-Bildpaket mit dem verwalteten Desktopbild verknüpfen
+  ansible.builtin.file:
+    src: /usr/share/backgrounds/lab.png
+    dest: /usr/share/wallpapers/CiscoLab/contents/images/1920x1080.png
+    state: link
+    owner: root
+    group: root
+
+- name: LAB-Design vor dem Plasma-Start ausschließlich für das Sammelkonto setzen
+  ansible.builtin.copy:
+    dest: /etc/xdg/plasma-workspace/env/19-cisco-lab-wallpaper.sh
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      if [ "$(id -un)" = cisco ] && [ "$HOME" = /var/lib/cisco-lab-local/cisco ] &&
+          [ -r /etc/cisco-lab/local-cisco.json ]; then
+          /usr/bin/kwriteconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage de.bbs-einbeck.cisco-lab
+      fi
+
+- name: Abgelösten Hintergrund-Autostart entfernen
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/xdg/autostart/cisco-lab-cisco-wallpaper.desktop
+    - /usr/local/libexec/cisco-lab/cisco-wallpaper.py

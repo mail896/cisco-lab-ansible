@@ -3,18 +3,18 @@
   ansible.builtin.assert:
     that:
       - lab_network_manifest.host | default('') == inventory_hostname
-      - lab_network_manifest.group | default('') == 'lab.students'
+      - lab_network_manifest.group | default('') == 'cisco.lab'
       - lab_network_manifest.version | default(0) == 1
     fail_msg: Kein geprueftes Hostmanifest vorhanden. Niemals Adapter/UUIDs erraten.
 
 - name: IServ-Gruppe aufloesen
   ansible.builtin.getent:
     database: group
-    key: lab.students
+    key: cisco.lab
 
 - name: Root-Gruppe ausschliessen
   ansible.builtin.assert:
-    that: ansible_facts.getent_group['lab.students'][1] | int > 0
+    that: ansible_facts.getent_group['cisco.lab'][1] | int > 0
 
 - name: Rootgeschuetzten temporaeren Pruefpfad bereitstellen
   ansible.builtin.file:

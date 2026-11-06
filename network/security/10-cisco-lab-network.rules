@@ -1,7 +1,7 @@
 // Candidate for a later tested migration; NOT installed by local preparation.
 // Must replace the old broad 49-networkmanager-cisco.rules, not run beside it.
 polkit.addRule(function(action, subject) {
-    if (subject.isInGroup("lab.students") &&
+    if (subject.isInGroup("cisco.lab") &&
         action.id.indexOf("org.freedesktop.NetworkManager.") === 0) {
         // Status remains readable via NetworkManager's read APIs.
         // Mutating operations require the future constrained LAB broker.

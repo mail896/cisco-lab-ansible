@@ -48,3 +48,21 @@ select { border: 1px solid #cbd7e3; background: white; border-radius: 8px; color
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }
 @media (max-width: 900px) { body { grid-template-columns: 170px minmax(0, 1fr); } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) { body { display: block; } .sidebar { position: static; height: auto; padding: 15px 18px; } nav { display: flex; flex-wrap: wrap; margin-top: 12px; } .sidebar-foot { display: none; } main { padding: 20px 14px; } header { align-items: flex-start; flex-direction: column; } .section-heading { flex-wrap: wrap; } .metrics article, .panel { padding: 12px; } }
+.button.primary { background: #205f3b; }
+.task-list, #pilot-output, #appearance-release-output { max-height: 24rem; overflow: auto; background: #f2f5f8; border-radius: 7px; padding: 14px 18px; }
+.task-list { padding-left: 38px; }
+#pilot-output, #appearance-release-output { white-space: pre-wrap; overflow-wrap: anywhere; }
+dialog { width: min(32rem, calc(100% - 32px)); color: inherit; border: 1px solid #cbd7e3; border-radius: 11px; padding: 20px; }
+dialog h3 { margin-top: 0; }
+dialog::backdrop { background: rgb(16 29 47 / 55%); }
+#pilot-review form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#pilot-review fieldset, #pilot-review-note, #pilot-review form > label, #pilot-review-error { grid-column: 1 / -1; }
+#pilot-review fieldset label { display: block; font-weight: 500; margin: 7px 0; }
+#pilot-review-error:empty { display: none; }
+
+[hidden] { display: none !important; }
+nav a[aria-current="page"] { background: #273c56; color: white; font-weight: 700; }
+
+.log-button { padding: 3px 8px; margin: 2px 0; font-size: .8rem; }
+
+.console-output { max-height: 28rem; overflow: auto; background: #f2f5f8; border-radius: 7px; padding: 14px 18px; white-space: pre-wrap; overflow-wrap: anywhere; }

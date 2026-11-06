@@ -23,14 +23,14 @@
       - preferred://filemanager
       - applications:firefox-esr.desktop
       - applications:packettracer.desktop
-      - applications:example.unterrichtszeit.desktop
+      - applications:de.bbs-einbeck.unterrichtszeit.desktop
       - applications:org.kde.konsole.desktop
       - applications:putty.desktop
       - applications:cisco-console.desktop
       - applications:wireshark-lab.desktop
     lab_fresh_packettracer_sha256: dd9ac0d4c7fc37dcb68f627fd7c7e6fa6d4200c14492526e5618b9bd172ed920
     lab_fresh_packettracer_app_sha256: 3efe3bfb1b01b252ad3ee4c88d5ba48d6f3711fde94b724bd26cc1a4d3cab477
-    lab_fresh_veyon_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+    lab_fresh_veyon_sha256: b315bd556c3b9c944c89a11f9525d99873861724be86b0be488bb5e7f19b36ef
 
   tasks:
     - name: Ein ausdrücklich benanntes frisches Gerät und alle Eingaben verlangen
@@ -43,16 +43,17 @@
           - >-
             inventory_hostname != 'LAB-08B' or
             ((lab_fresh_rebuild_08b | default(false) | bool) and
-             ansible_host == '192.0.2.16' and
+             ansible_host == '10.255.40.16' and
              lab_fresh_known_hosts != lookup('ansible.builtin.env', 'HOME') + '/.ssh/known_hosts')
           - inventory_hostname is match('^LAB-0[1-8][AB]$')
-          - ansible_host is match('^192\.0\.2\.([1-9]|1[0-6])$')
+          - ansible_host is match('^10\.255\.40\.([1-9]|1[0-6])$')
           - (lab_network_manifest.host | default('')) == inventory_hostname
           - (lab_network_manifest.version | default(0)) == 1
-          - (lab_network_manifest.group | default('')) == 'lab.students'
+          - (lab_network_manifest.group | default('')) == 'cisco.lab'
           - (lab_fresh_student | default('')) is match('^[a-zA-Z0-9_.-]+$')
           - (lab_fresh_packettracer_deb | default('')) is match('^/')
-          - (lab_fresh_veyon_public_key | default('')) is match('^/')
+          - not (lab_fresh_install_veyon | default(true) | bool) or
+            (lab_fresh_veyon_public_key | default('')) is match('^/')
         fail_msg: >-
           Installation nur auf einem explizit bestätigten Einzelclient mit
           geprüftem Netzwerkmanifest, Testkonto und lokalen Paketdateien.
@@ -63,9 +64,10 @@
         path: "{{ item.path }}"
         follow: false
         checksum_algorithm: sha256
-      loop:
-        - {path: "{{ lab_fresh_packettracer_deb }}", sha256: "{{ lab_fresh_packettracer_sha256 }}"}
-        - {path: "{{ lab_fresh_veyon_public_key }}", sha256: "{{ lab_fresh_veyon_sha256 }}"}
+      loop: >-
+        {{ [{'path': lab_fresh_packettracer_deb, 'sha256': lab_fresh_packettracer_sha256}]
+           + ([{'path': lab_fresh_veyon_public_key, 'sha256': lab_fresh_veyon_sha256}]
+              if (lab_fresh_install_veyon | default(true) | bool) else []) }}
       delegate_to: localhost
       become: false
       vars:
@@ -104,7 +106,7 @@
                        any(ip['local'] == address for ip in row.get('addr_info', []))
                        for row in interfaces):
                 raise SystemExit('Schul-IP und verifizierte Schul-MAC passen nicht zusammen.')
-            group = grp.getgrnam('lab.students').gr_gid
+            group = grp.getgrnam('cisco.lab').gr_gid
             for name, expected in ((student, True), ('administrator', False)):
                 user = pwd.getpwnam(name)
                 if group <= 0 or user.pw_uid == 0 or (group in os.getgrouplist(name, user.pw_gid)) != expected:
@@ -220,11 +222,13 @@
 
     - name: Veyon-Client mit geprüftem öffentlichem Lehrerschlüssel einrichten
       ansible.builtin.import_tasks: tasks/fresh/veyon.yml
+      when: lab_fresh_install_veyon | default(true) | bool
 
     - name: Erstlogin und Freigabe als getrennte Abnahme ausweisen
       ansible.builtin.debug:
         msg: >-
           Installation abgeschlossen. Vor Unterrichtsbetrieb Neustart und IServ-Erstlogin,
           Schulroute, Laborprofil, KDE-Sperren, Konsolen, U-Zeiten, Wireshark,
-          Firefox-Download, Packet-Tracer-Start und Veyon praktisch prüfen.
+          Firefox-Download und Packet-Tracer-Start praktisch prüfen.
+          Veyon prüfen, sofern dessen Installation ausgewählt wurde.
           Übergreifende Dateisicherung: {{ lab_fresh_snapshot.stdout }}.

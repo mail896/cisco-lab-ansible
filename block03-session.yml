@@ -10,7 +10,7 @@
         that:
           - lab_block03_test_confirmed | default(false) | bool
           - inventory_hostname == 'LAB-08A'
-          - ansible_host == '192.0.2.15'
+          - ansible_host == '10.255.40.15'
           - ansible_play_hosts_all == ['LAB-08A']
         fail_msg: >-
           Dieser vorbereitete Testblock darf nur mit --limit LAB-08A und

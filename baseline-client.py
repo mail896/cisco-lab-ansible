@@ -2,6 +2,7 @@
 """Start the password bootstrap and LAB baseline as one guided client operation."""
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -15,6 +16,8 @@ def main():
     parser.add_argument('host', help='Single inventory name, for example LAB-01A')
     parser.add_argument('variables', type=Path, help='Local JSON with reviewed hardware and artifacts')
     parser.add_argument('--key', type=Path, required=True, help='Management SSH identity on LAB-Teacher')
+    parser.add_argument('--dashboard', action='store_true',
+                        help='After SSH bootstrap, admit this client once for the dashboard')
     parser.add_argument('--plan', action='store_true', help='Show both selected targets without SSH')
     args = parser.parse_args()
     variables = args.variables.expanduser().resolve()
@@ -55,6 +58,18 @@ def main():
     )
     subprocess.run(command + ['bootstrap-client.yml', '--ask-pass', '--ask-become-pass',
                              '-e', json.dumps(bootstrap_settings)], cwd=REPOSITORY, check=True)
+    if args.dashboard:
+        directory = REPOSITORY / 'local-private/fresh-clients'
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        target = directory / f'{args.host}.json'
+        settings['lab_fresh_known_hosts'] = str(known_hosts)
+        descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(descriptor, 'w') as file:
+            json.dump(settings, file, indent=2)
+            file.write('\n')
+        print(f'{args.host} kann jetzt einmalig unter Neuinstallation gestartet werden.')
+        return
+
     subprocess.run(command + ['fresh-client.yml', '--private-key', str(identity_file),
                              '-e', f'@{variables}', '-e',
                              json.dumps({'lab_fresh_known_hosts': str(known_hosts)})],

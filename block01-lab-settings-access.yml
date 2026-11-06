@@ -1,0 +1,49 @@
+---
+- name: KDE-Systemsteuerung für die LAB-Gruppe auf LAB-08A sperren
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  vars_files:
+    - tasks/settings-vars.yml
+  vars:
+    lab_settings_test_accounts:
+      - {name: s.test, allowed: 'no'}
+      - {name: administrator, allowed: 'yes'}
+  tasks:
+    - name: Ausschließlich den bestätigten Testclient zulassen
+      ansible.builtin.assert:
+        that:
+          - lab_settings_test_confirmed | default(false) | bool
+          - ansible_play_hosts_all == ['LAB-08A']
+          - inventory_hostname == 'LAB-08A'
+          - ansible_host == '10.255.40.15'
+
+    - name: LAB-Gruppen-ID auf dem Client auflösen
+      ansible.builtin.getent:
+        database: group
+        key: cisco.lab
+
+    - name: Aufgelöste Gruppen-ID für Paketupdates verwenden
+      ansible.builtin.set_fact:
+        lab_settings_gid: "{{ ansible_facts.getent_group['cisco.lab'][1] | int }}"
+
+    - name: Gruppenzuordnung der beiden Testkonten sicherstellen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            import os, pwd, socket, sys
+            assert socket.gethostname() == 'LAB-08A'
+            gid = int(sys.argv[1])
+            assert gid > 0
+            for name, expected in [('s.test', True), ('administrator', False)]:
+                user = pwd.getpwnam(name)
+                assert (gid in os.getgrouplist(name, user.pw_gid)) == expected
+          - "{{ lab_settings_gid }}"
+      changed_when: false
+      check_mode: false
+
+    - name: Geprüfte KDE-Sperre installieren
+      ansible.builtin.import_tasks: tasks/settings-access.yml

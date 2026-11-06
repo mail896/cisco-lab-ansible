@@ -27,7 +27,7 @@ PROTECTED_PREFIXES = (
 )
 VERSIONED_KERNEL = re.compile(r'linux-image-[0-9].*\Z')
 PATCH_ABI_PACKAGES = {'winbind', 'samba-libs', 'samba-common-bin', 'libwbclient0'}
-PATCH_HASH = ''
+PATCH_HASH = '61fe179121bcc6d3442d1ded9b59e9b5239daae4adc905ac6e487735d81b89e9'
 STOCK_HASH = 'f7924c46f0ded38e5965fdc9f95a08e278fceedf02e3b29239b6400560b54943'
 
 
@@ -180,7 +180,7 @@ def main():
         parser.error('Erwartet werden genau 16 benannte LAB-Schülerclients.')
     addresses = [inventory['_meta']['hostvars'][host]['ansible_host'] for host in hosts]
     if len(set(addresses)) != len(hosts) or any(
-        not re.fullmatch(r'192\.0\.2\.([1-9]|1[0-6])', address) for address in addresses
+        not re.fullmatch(r'10\.255\.40\.([1-9]|1[0-6])', address) for address in addresses
     ):
         parser.error('Schülerclient-Adressen sind nicht eindeutig oder außerhalb des LAB.')
     with ThreadPoolExecutor(max_workers=4) as executor:

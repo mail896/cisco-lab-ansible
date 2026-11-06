@@ -1,0 +1,15 @@
+# Beispiel für einen separaten Caddy-Server.
+# Vor der Freigabe die Beispiel-IP durch die vertrauenswürdigen Zugangsnetze
+# ersetzen oder die vorhandene vorgeschaltete Anmeldung mit MFA einbinden.
+lab.example.org {
+    @denied not remote_ip 192.0.2.0/24
+    respond @denied 403
+
+    reverse_proxy https://192.0.2.100:443 {
+        header_up Host lab.example.org
+        transport http {
+            tls_server_name lab.example.org
+            tls_trust_pool file /etc/caddy/lab-backend-ca.pem
+        }
+    }
+}

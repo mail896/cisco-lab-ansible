@@ -1,0 +1,85 @@
+---
+- name: Labornetz im Schüler-Schnellstart auf LAB-08A
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  vars:
+    desktop_config: /etc/cisco-lab/desktop.json
+    old_launcher: applications:systemsettings.desktop
+    new_launcher: applications:cisco-lab-network.desktop
+  tasks:
+    - name: Ausschließlich den bestätigten Testclient zulassen
+      ansible.builtin.assert:
+        that:
+          - lab_launcher_test_confirmed | default(false) | bool
+          - ansible_play_hosts_all == ['LAB-08A']
+          - inventory_hostname == 'LAB-08A'
+          - ansible_host == '10.255.40.15'
+
+    - name: Vermittler und seine Netzwerkverbindung prüfen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - /usr/local/lib/cisco-lab/network/broker/healthcheck.py
+      changed_when: false
+      check_mode: false
+
+    - name: Installierten Labornetz-Starter prüfen
+      ansible.builtin.stat:
+        path: /usr/share/applications/cisco-lab-network.desktop
+        follow: false
+      register: lab_launcher
+
+    - name: Aktuelle Schnellstart-Konfiguration prüfen
+      ansible.builtin.stat:
+        path: "{{ desktop_config }}"
+        follow: false
+      register: desktop_config_stat
+
+    - name: Nur root-eigene reguläre Dateien verwenden
+      ansible.builtin.assert:
+        that:
+          - item.isreg | default(false)
+          - item.uid == 0
+          - not item.wgrp
+          - not item.woth
+      loop:
+        - "{{ lab_launcher.stat }}"
+        - "{{ desktop_config_stat.stat }}"
+      loop_control:
+        label: "{{ item.path | default('Datei fehlt') }}"
+
+    - name: Aktuelle Desktop-Einstellungen lesen
+      ansible.builtin.slurp:
+        src: "{{ desktop_config }}"
+      register: desktop_config_raw
+
+    - name: Desktop-Einstellungen dekodieren
+      ansible.builtin.set_fact:
+        desktop_settings: "{{ desktop_config_raw.content | b64decode | from_json }}"
+
+    - name: Erwarteten Schüler-Schnellstart sicherstellen
+      ansible.builtin.assert:
+        that:
+          - desktop_settings.group == 'cisco.lab'
+          - desktop_settings.launchers is sequence
+          - desktop_settings.launchers is not string
+          - desktop_settings.launchers | length > 0
+          - desktop_settings.launchers[0] in [old_launcher, new_launcher]
+          - (old_launcher not in desktop_settings.launchers[1:]) and (new_launcher not in desktop_settings.launchers[1:])
+
+    - name: Den ersten Starter für die nächste Schüler-Anmeldung ersetzen
+      ansible.builtin.copy:
+        dest: "{{ desktop_config }}"
+        content: "{{ desktop_settings | combine({'launchers': [new_launcher] + desktop_settings.launchers[1:]}) | to_nice_json }}\n"
+        owner: root
+        group: root
+        mode: '0644'
+        backup: true
+      when: desktop_settings.launchers[0] == old_launcher
+      register: launcher_update
+
+    - name: Sicherung und Aktivierung melden
+      ansible.builtin.debug:
+        msg: "Wirksam ab der nächsten LAB-Anmeldung. Sicherung: {{ launcher_update.backup_file | default('bereits eingerichtet oder Check-Modus') }}"

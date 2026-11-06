@@ -145,7 +145,7 @@
 
 - name: Bestehendes LAB-Hintergrundbild installieren
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/files/lab.png"
+    src: "{{ lab_desktop_image_source | default(playbook_dir + '/files/lab.png') }}"
     dest: "{{ lab_desktop_wallpaper }}"
     owner: root
     group: root

@@ -85,7 +85,7 @@
 
 - name: Socket mit der tatsächlich aufgelösten LAB-Gruppen-ID bereitstellen
   ansible.builtin.copy:
-    content: "{{ lookup('ansible.builtin.file', playbook_dir + '/network/systemd/cisco-lab-capture.socket') | replace('root:lab.students', 'root:+' + (lab_settings_gid | string)) }}\n"
+    content: "{{ lookup('ansible.builtin.file', playbook_dir + '/network/systemd/cisco-lab-capture.socket') | replace('root:cisco.lab', 'root:+' + (lab_settings_gid | string)) }}\n"
     dest: /etc/systemd/system/cisco-lab-capture.socket
     owner: root
     group: root

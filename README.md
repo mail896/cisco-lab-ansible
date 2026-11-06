@@ -1,67 +1,34 @@
-# CISCO-LAB mit Debian und Ansible
+# CISCO Lab Ansible
 
-Ansible-Baseline für ein Cisco-Netzwerklabor mit Debian- und IServ-Clients.
-Sie richtet Arbeitsplätze ein und trennt den Schulanschluss vom Übungsnetz. Die Ansible-Verwaltung läuft
-auf einem Rechner der Lehrkraft. Die Clients werden zunächst mit dem
-vorgesehenen Schulimage installiert und melden sich an der bestehenden
-Schuldomäne an.
+Ansible automation and a teacher-operated dashboard for the Linux networking classroom at BBS Einbeck, Germany. The room has 16 student workstations arranged in eight teams, plus a teacher PC. Students practise switching and routing on physical Cisco equipment from Debian 13 and KDE Plasma workstations.
 
-## Aufbau
+[Project website and screenshots](https://mail896.github.io/cisco-lab-ansible/) · [Operations guide](docs/dashboard.md) · [Maintenance guide](docs/wartung-vorschau.md)
 
-![Netzplan eines LAB-Teams mit getrenntem IServ- und Übungsanschluss](docs/labornetz.svg)
+![Live KDE desktop on LAB-08A, showing the classroom clock](docs/media/lab-08a-desktop.jpg)
 
-Jeder Arbeitsplatz hat zwei physische Ethernet-Anschlüsse. Der interne
-Anschluss dient der Schulverbindung und behält DHCP, DNS und die
-Standardroute. Ein USB-Ethernet-Adapter verbindet den Client mit dem
-Übungsnetz. Die Laboradressen werden von den Lernenden passend zur
-Aufgabe eingetragen. Die Zuordnung nutzt geprüfte Hardwaremerkmale und
-die tatsächlichen NetworkManager-Profile des Rechners.
+## How the lab works
 
-Ansible trennt die Erstaufnahme des Verwaltungszugangs von den
-fachlichen Rollen. Vor dem ersten Lauf werden der SSH-Hostschlüssel
-und die Adapterzuordnung geprüft. Danach folgen Netzverwaltung,
-Konsolenprogramme, Wireshark, KDE, Firefox und Veyon. Der erste Login
-mit einem Testkonto prüft die Domänenanmeldung und die Sitzung.
+Each student workstation has an internal Ethernet interface for the school network and a USB Ethernet interface for exercises. The school interface keeps IServ access and the default route. Students configure static IPv4 and IPv6 addresses and specific routes through the Lab Network dialog. A privileged service checks and applies changes to the assigned USB adapter. Wireshark capture is scoped to that adapter, and the serial launchers coordinate access to the Cisco console cable.
 
-## Verwaltung
+The local dashboard on LAB-Teacher provides pilot deployments, approval before room-wide deployment, image selection, room actions and encrypted backups. Pilot and room deployments keep run logs. The local classroom account is configured independently of IServ and is deliberately provisioned without SSH access.
 
-Die lokale Oberfläche zeigt Wartungsvorschauen und die Ansible-
-Aufgabenfolge für ein gewähltes Ziel. Die spätere Ausführung erhält
-fest definierte Aufträge mit Pilotlauf, Freigabe und Laufprotokoll.
+[Lab topology](docs/labornetz.svg) · [Live Lab Network dialog](docs/media/lab-08a-network.jpg)
 
-Der Wartungspilot unterscheidet zwischen freien und belegten Clients.
-Bei einer aktiven Sitzung werden Updates nur zum späteren Installieren
-heruntergeladen. Automatische Paketentfernung braucht eine Vorschau,
-damit wichtige Komponenten und ein startfähiger Ersatzkernel erhalten bleiben.
+## Repository guide
 
-## Inhalt einer öffentlichen Fassung
+| Path | Purpose |
+| --- | --- |
+| `dashboard/` | Teacher dashboard, pilot approval, room actions and backup workflow |
+| `roles/` and `block*.yml` | KDE, Firefox, serial console and network configuration |
+| `network/` | Lab Network dialog, configuration broker and USB capture service |
+| `bootstrap-client.yml`, `fresh-client.yml` | SSH admission and guarded baseline for a fresh IServ image |
+| `local-cisco.yml` | Local classroom account and its lab desktop defaults |
+| `maintenance/` | APT maintenance preview, pilot and systemd timer |
+| `inventory.example.ini` | Example inventory to adapt to a local installation |
+| `files/README.md` | Local assets and artifacts required by selected playbooks |
 
-Veröffentlicht werden Architektur, ausgewählte Rollen und Beispiele mit
-Platzhalterdaten. Geräteinventar, echte Adressen und Hardwarekennungen,
-Zugangsdaten, Schlüssel, Schülerdaten, Diagnoseprotokolle, Sicherungen
-und Herstellerpakete bleiben in der lokalen Verwaltungsumgebung.
-Die Veröffentlichung entsteht aus einem bereinigten Export.
+## Before running anything
 
-## Beispiel lokal prüfen
+Use a lab-only inventory and confirm the SSH fingerprints and school adapter identity. Review `--list-hosts` and `--list-tasks`, start on one pilot, and test sign-in, the school route, the USB lab interface and the apps before approving a classroom deployment. Supply the site-specific values and package files documented in the operations guide.
 
-Das Beispielinventar enthält Dokumentationsadressen. Für eine reine
-Syntaxprüfung kann es direkt verwendet werden:
-
-```bash
-ansible-playbook -i inventory.example.ini --syntax-check fresh-client.yml
-ansible-playbook -i inventory.example.ini --limit LAB-08B --list-tasks fresh-client.yml
-```
-
-Für den Betrieb sind das eigene Inventar, die verifizierten SSH-Hostschlüssel,
-Hardwarezuordnungen und lokal freigegebene Artefakte erforderlich. Die
-Beispielwerte für IP- und Zielgrenzen in Bootstrap, Baseline und
-Wartungsvorschau müssen dafür an die eigene Installation angepasst werden.
-Die Veyon- und Unterrichtszeit-Prüfsummen sind Platzhalter. Den passenden
-Desktopstarter, die Bilddateien und den Paketbezug lokal konfigurieren.
-
-- [Lokale Verwaltungsoberfläche](docs/dashboard.md)
-- [Wartungsvorschau](docs/wartung-vorschau.md)
-- [Beispiel für die Hardwarezuordnung](network/example-host-vars.json)
-
-Die Installationsbeispiele sind für einen freigegebenen Pilotclient
-vorgesehen. Die öffentliche Fassung enthält kein gepatchtes Winbind-Modul.
+Repository material covers the LAB clients and LAB-Teacher. The central IServ server is administered separately. Runtime credentials, key material, per-client manifests, encrypted backups and vendor packages are supplied locally.

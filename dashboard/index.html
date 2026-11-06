@@ -6,18 +6,26 @@
   <title>CISCO-LAB · Verwaltung</title>
   <link rel="stylesheet" href="/app.css">
   <script src="/app.js" defer></script>
+  <script src="/catalog.js" defer></script>
 </head>
 <body>
   <aside class="sidebar">
-    <a class="brand" href="#overview"><span class="brand-mark" aria-hidden="true">CL</span><span>CISCO-LAB<small>Schulnetzwerklabor</small></span></a>
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">CL</span><span>CISCO-LAB<small>BBS Einbeck</small></span></a>
     <nav aria-label="Bereiche">
-      <a href="#overview">Übersicht</a>
-      <a href="#clients">Schülerclients</a>
-      <a href="#deployment">Deployments</a>
+      <a href="/">Übersicht</a>
+      <a href="/schuelerclients">Schülerclients</a>
+      <a href="/playbooks">Playbooks</a>
+      <a href="/installationsfolge">Neuinstallation</a>
+      <a href="/wartung">Wartung</a>
+      <a href="/pilotdeploys">Pilotdeploys</a>
+      <a href="/sammelaktionen">Sammelaktionen</a>
+      <a href="/backup">Backup</a>
+      <a href="/desktopbilder">Desktopbilder</a>
     </nav>
-    <div class="sidebar-foot"><span class="dot"></span> LAB-Teacher<br><small>Lokale Vorschau</small></div>
+    <div class="sidebar-foot"><span class="dot"></span> LAB-Teacher<br><small>Lokale Verwaltung</small></div>
   </aside>
-  <main id="overview">
+  <main>
+    <section id="overview" data-page="/" aria-label="Übersicht">
     <header>
       <div><p class="eyebrow">Raumverwaltung</p><h1>LAB-Verwaltung</h1><p class="muted">Clientzustand, Wartung und Installationsfolgen</p></div>
       <button id="refresh" class="button" type="button">Vorschau aktualisieren</button>
@@ -29,7 +37,8 @@
       <article><span>Nur Download</span><strong id="count-busy">—</strong><small>laufende Sitzungen geschützt</small></article>
       <article><span>Zur Prüfung</span><strong id="count-review">—</strong><small>inklusive nicht erreichbarer Clients</small></article>
     </section>
-    <section id="clients" class="panel">
+    </section>
+    <section id="clients" class="panel" data-page="/schuelerclients" hidden>
       <div class="section-heading"><div><p class="eyebrow">Inventar</p><h2>Schülerclients</h2></div><span id="stamp" class="muted"></span></div>
       <div class="scroll"><table>
         <caption class="sr-only">Letzte lesende Wartungsvorschau pro Schülerclient</caption>
@@ -37,13 +46,153 @@
         <tbody id="client-rows"></tbody>
       </table></div>
     </section>
-    <section id="deployment" class="panel">
+    <section id="deployment" class="panel" data-page="/installationsfolge" hidden>
       <div class="section-heading"><div><p class="eyebrow">Ansible</p><h2>Installationsfolge prüfen</h2></div><span class="badge neutral">Vorschau</span></div>
       <p class="muted">Zeigt die Aufgaben der Baseline für genau einen ausgewählten Client.</p>
       <form id="plan-form"><label for="host">Zielclient</label><select id="host" required></select><button id="plan-button" class="button" type="submit">Aufgaben anzeigen</button></form>
       <p id="plan-status" role="status"></p>
       <ol id="tasks" hidden></ol>
+      <h3>Basisinstallation starten</h3>
+      <p class="muted">Einzelclient nach lokaler SSH-Erstaufnahme und geprüfter Hardwaredatei. Der GUI-Lauf installiert die LAB-Basis ohne Veyon.</p>
+      <form id="fresh-form">
+        <label for="fresh-host">Vorbereiteter Client</label><select id="fresh-host" required></select>
+        <button class="button primary" id="fresh-start" type="submit" disabled>Basis installieren</button>
+      </form>
+      <p id="fresh-status" role="status"></p>
+      <ul id="fresh-runs"></ul>
+      <pre id="fresh-output" class="console-output" hidden></pre>
     </section>
+    <section id="pilots" class="panel" data-page="/pilotdeploys" hidden>
+      <div class="section-heading"><div><p class="eyebrow">Testclients</p><h2>Pilotdeploy starten</h2></div><span class="badge neutral">Nur LAB-08A und LAB-08B</span></div>
+      <p class="muted">Wähle einen geprüften Auftrag. Der Testclient muss am Anmeldebildschirm stehen. Prüfe die Aufgaben, bevor du den Lauf startest.</p>
+      <form id="pilot-form">
+        <label for="pilot-host">Testclient</label><select id="pilot-host" required></select>
+        <label for="pilot-job">Auftrag</label><select id="pilot-job" required></select>
+        <button class="button" id="pilot-plan" type="submit" disabled>Aufgaben prüfen</button>
+      </form>
+      <p id="pilot-status" role="status">Aufträge werden geladen …</p>
+      <ol id="pilot-tasks" class="task-list" hidden></ol>
+      <p id="pilot-action" hidden>
+        <button class="button primary" id="pilot-start" type="button" disabled>Pilot jetzt starten</button>
+      </p>
+      <dialog id="pilot-confirm" aria-labelledby="pilot-confirm-title">
+        <h3 id="pilot-confirm-title">Pilotdeploy bestätigen</h3>
+        <p id="pilot-confirm-target"></p>
+        <form method="dialog">
+          <button class="button" value="cancel" autofocus>Abbrechen</button>
+          <button class="button primary" value="start">Deploy ausführen</button>
+        </form>
+      </dialog>
+      <h3>Laufprotokolle</h3>
+      <p id="pilot-empty" class="muted" hidden>Noch kein Pilotdeploy gestartet.</p>
+      <div class="scroll"><table>
+        <caption class="sr-only">Letzte Pilotdeploys</caption>
+        <thead><tr><th>Start</th><th>Testclient</th><th>Auftrag</th><th>Status</th><th>Abnahme</th><th>Protokoll</th></tr></thead>
+        <tbody id="pilot-runs"></tbody>
+      </table></div>
+      <dialog id="pilot-review" aria-labelledby="pilot-review-title">
+        <h3 id="pilot-review-title">Praxistest dokumentieren</h3>
+        <p id="pilot-review-target"></p>
+        <form id="pilot-review-form">
+          <fieldset id="pilot-review-checks"><legend>Bestätigte Prüfpunkte</legend></fieldset>
+          <label for="pilot-review-note">Anmerkung</label>
+          <textarea id="pilot-review-note" maxlength="150" rows="3"></textarea>
+          <p id="pilot-review-error" role="status"></p>
+          <button type="button" class="button" id="pilot-review-cancel">Abbrechen</button>
+          <button type="submit" class="button" value="rejected">Ablehnen</button>
+          <button type="submit" class="button primary" value="accepted">Abnehmen</button>
+        </form>
+      </dialog>
+      <pre id="pilot-output" aria-label="Laufprotokoll" hidden></pre>
+    </section>
+    <section id="room" class="panel" data-page="/sammelaktionen" hidden>
+      <div class="section-heading"><div><p class="eyebrow">Schülerclients</p><h2>Sammelaktionen</h2></div></div>
+      <p class="muted">Neustart und Herunterfahren überspringen belegte Clients. „Schüler abmelden“ beendet KDE-Sitzungen. Vorher offene Arbeiten speichern lassen. Die Anmeldung als lokales Sammelkonto cisco startet einmalig auf freien, vorbereiteten Clients und nutzt keine IServ-Freigaben.</p>
+      <form id="room-form">
+        <label for="room-scope">Zielgruppe</label>
+        <select id="room-scope"><option value="pilots">LAB-08A/B</option><option value="pilot-a">Nur LAB-08A</option><option value="pilot-b">Nur LAB-08B</option><option value="room">Alle 16 Schülerclients</option></select>
+        <label for="room-action">Aktion</label><select id="room-action" required></select>
+        <button class="button" type="submit" id="room-prepare" disabled>Aktion prüfen</button>
+      </form>
+      <dialog id="room-confirm" aria-labelledby="room-confirm-title">
+        <h3 id="room-confirm-title">Sammelaktion bestätigen</h3>
+        <p id="room-confirm-target"></p>
+        <form method="dialog">
+          <button class="button" value="cancel" autofocus>Abbrechen</button>
+          <button class="button primary" value="start">Jetzt ausführen</button>
+        </form>
+      </dialog>
+      <p id="room-status" role="status"></p>
+      <div id="room-runs"></div>
+    </section>
+    <section id="backup" class="panel" data-page="/backup" hidden>
+      <div class="section-heading"><div><p class="eyebrow">LAB-Teacher</p><h2>Konfiguration sichern</h2></div></div>
+      <p class="muted">Speichert ein verschlüsseltes Archiv unter backup_data auf der data-Partition und sendet eine Kopie per SCP an den macOS-Server. Der Wiederherstellungsschlüssel ist nur lokal auf LAB-Teacher abrufbar.</p>
+      <form id="backup-form">
+        <label><input type="checkbox" id="backup-confirm" required> Wiederherstellungsschlüssel separat gesichert</label>
+        <button class="button" id="backup-start" type="submit">Backup erstellen</button>
+      </form>
+      <p id="backup-status" role="status"></p>
+      <ul id="backup-runs"></ul>
+    </section>
+    <section id="appearance" class="panel" data-page="/desktopbilder" hidden>
+      <div class="section-heading"><div><p class="eyebrow">KDE und SDDM</p><h2>Desktop- und Sperrbild</h2></div></div>
+      <p class="muted">PNG- und JPEG-Dateien auf LAB-Teacher in <code id="appearance-folder">~/Bilder/CISCO-LAB</code> ablegen und die Liste neu laden. Das Sperrbild gilt auch für den Anmeldebildschirm.</p>
+      <form id="appearance-form">
+        <label for="appearance-desktop">Desktop</label><select id="appearance-desktop"></select>
+        <label for="appearance-lock">Sperre und Anmeldung</label><select id="appearance-lock"></select>
+        <button class="button" id="appearance-refresh" type="button">Bilder neu laden</button>
+        <button class="button primary" id="appearance-save" type="submit" disabled>Auswahl speichern</button>
+      </form>
+      <p class="muted">Danach unter <a href="/pilotdeploys">Pilotdeploys</a> den Auftrag „Desktop- und Sperrbild“ wählen.</p>
+      <p id="appearance-status" role="status"></p>
+      <h3>Freigabe für den Raum</h3>
+      <p class="muted">Die Verteilung verwendet genau den abgenommenen Stand. Belegte Clients werden ausgelassen.</p>
+      <p id="appearance-release-status" role="status"></p>
+      <form id="appearance-release-form">
+        <label><input type="checkbox" id="appearance-release-refresh" checked> Anmeldebild auf freien Clients sofort aktualisieren</label>
+        <button class="button primary" id="appearance-release-start" type="submit" disabled>Raumverteilung prüfen</button>
+      </form>
+      <dialog id="appearance-release-confirm" aria-labelledby="appearance-release-title">
+        <h3 id="appearance-release-title">Bildstand im Raum verteilen</h3>
+        <p id="appearance-release-targets"></p>
+        <form method="dialog">
+          <button class="button" value="cancel" autofocus>Abbrechen</button>
+          <button class="button primary" id="appearance-release-confirm-start" value="start">Verteilen</button>
+        </form>
+      </dialog>
+      <div id="appearance-release-runs"></div>
+      <pre id="appearance-release-output" aria-label="Ansible-Protokoll" hidden></pre>
+    </section>
+    <section id="playbooks" class="panel" data-page="/playbooks" hidden>
+      <div class="section-heading"><div><p class="eyebrow">Ansible</p><h2>Playbook-Katalog</h2></div></div>
+      <p class="muted">Aufträge, Quellen und Freigaben. Eine Raumverteilung verwendet den auf dem Pilotclient abgenommenen Stand.</p>
+      <label for="catalog-job">Auftrag</label>
+      <select id="catalog-job"></select>
+      <p id="catalog-source"></p>
+      <details id="catalog-code-details"><summary>Quelldatei anzeigen</summary><pre id="catalog-code" class="console-output"></pre></details>
+      <p id="catalog-status" role="status"></p>
+      <p><a href="/pilotdeploys">Pilot auf LAB-08A/B starten</a> · <a href="/desktopbilder">Bilder im Raum verteilen</a></p>
+      <button type="button" class="button primary" id="catalog-rollout" disabled>Freigegebenen Auftrag im Raum verteilen</button>
+      <div id="catalog-runs"></div>
+      <pre id="catalog-output" class="console-output" hidden></pre>
+    </section>
+    <section id="maintenance" class="panel" data-page="/wartung" hidden>
+      <div class="section-heading"><div><p class="eyebrow">APT</p><h2>Wartung auf LAB-08B</h2></div></div>
+      <p class="muted">Pilotlauf. Der bestehende Wartungsdienst entscheidet auf dem Client, ob er nur lädt oder installiert. Der manuelle Start ist werktags von 18–20 Uhr freigegeben.</p>
+      <button type="button" class="button" id="maintenance-refresh">Status aktualisieren</button>
+      <button type="button" class="button primary" id="maintenance-start" disabled>Wartung auf LAB-08B starten</button>
+      <p id="maintenance-status" role="status"></p>
+      <pre id="maintenance-output" class="console-output"></pre>
+    </section>
+    <dialog id="catalog-confirm" aria-labelledby="catalog-confirm-title">
+      <h3 id="catalog-confirm-title">Verwaltungsauftrag bestätigen</h3>
+      <p id="catalog-confirm-text"></p>
+      <form method="dialog">
+        <button class="button" value="cancel" autofocus>Abbrechen</button>
+        <button class="button primary" value="start">Jetzt starten</button>
+      </form>
+    </dialog>
   </main>
 </body>
 </html>

@@ -1,6 +1,5 @@
-# Lokale Installationsdateien
+# Local deployment assets
 
-Für einen eigenen Pilot sind ein freigegebenes Desktopbild `lab.png`
-und Anmeldebild `network.jpg` erforderlich. Hinterlege die aus offizieller
-Quelle bezogenen Installationspakete außerhalb des öffentlichen Git-Verlaufs.
-Lege den Pfad und die Prüfsummen in der lokalen Konfiguration fest.
+Supply the approved wallpaper files, the U-Zeiten Debian package and any locally obtained Packet Tracer installer at the paths referenced by your inventory or reviewed host manifest. Verify the expected hashes and obtain software through the appropriate vendor or school distribution channel. Supply any optional Veyon public key through the local manifest. Use the dashboard image selector for the current classroom wallpaper and greeter image.
+
+Runtime credentials and private key material belong on the teacher workstation. The repository includes a live desktop screenshot for documentation.

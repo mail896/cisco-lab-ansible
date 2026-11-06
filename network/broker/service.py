@@ -55,8 +55,8 @@ def load_config(path=CONFIG):
         raise ValueError('Ungueltige Vermittler-Konfiguration.')
     if value['host'] != socket.gethostname():
         raise ValueError('Verwaltungskonfiguration gehoert zu einem anderen Rechner.')
-    if value['group'] != 'lab.students':
-        raise ValueError('Nur die bestaetigte IServ-Gruppe lab.students ist vorgesehen.')
+    if value['group'] != 'cisco.lab':
+        raise ValueError('Nur die bestaetigte IServ-Gruppe cisco.lab ist vorgesehen.')
     validate_identity(value['identity'])
     return value
 
@@ -104,7 +104,7 @@ class Server(socketserver.UnixStreamServer):
         peer = auth.peer_credentials(connection)
         if peer.uid == 0 or self.gid not in peer.groups:
             raise auth.Denied('Keine LAB-Gruppenberechtigung in dieser Sitzung.')
-        if auth.group_id('lab.students') != self.gid:
+        if auth.group_id('cisco.lab') != self.gid:
             raise auth.Denied('LAB-Gruppenzuordnung hat sich geaendert. Bitte die Lehrkraft informieren.')
         return peer, auth.authorize(peer,self.gid,self.sessions())
 
@@ -138,7 +138,7 @@ class Server(socketserver.UnixStreamServer):
                     raise
             if now-self.last_sessions >= 5:
                 self.last_sessions = now
-                if auth.group_id('lab.students') != self.gid:
+                if auth.group_id('cisco.lab') != self.gid:
                     raise auth.Denied('LAB-Gruppenzuordnung hat sich geaendert; kein Login-Reset.')
                 for session in self.sessions():
                     account = pwd.getpwuid(session['uid'])

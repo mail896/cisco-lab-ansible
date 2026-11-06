@@ -29,7 +29,7 @@
     "hardware_DHCP_WOL_and_rollback_acceptance"
   ],
   "authorization": {
-    "student_group": "lab.students",
+    "student_group": "cisco.lab",
     "source": "IServ Samba AD",
     "native_nm_mutation": "deny",
     "editor": "dedicated laboratory dialog",

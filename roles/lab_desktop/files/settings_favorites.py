@@ -9,7 +9,7 @@ def main():
     if os.geteuid() == 0:
         return
     try:
-        gid = grp.getgrnam('lab.students').gr_gid
+        gid = grp.getgrnam('cisco.lab').gr_gid
     except KeyError:
         return
     if gid == 0 or gid not in {os.getgid(), *os.getgroups()}:

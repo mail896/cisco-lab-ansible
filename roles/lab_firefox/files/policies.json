@@ -13,7 +13,7 @@
     "OverrideFirstRunPage": "",
     "OverridePostUpdatePage": "",
     "Homepage": {
-      "URL": "https://school.example.invalid",
+      "URL": "https://bbs-einbeck.de",
       "Locked": true,
       "StartPage": "homepage"
     },
@@ -38,7 +38,7 @@
         "Status": "locked"
       },
       "browser.startup.homepage": {
-        "Value": "https://school.example.invalid",
+        "Value": "https://bbs-einbeck.de",
         "Status": "locked"
       },
       "browser.aboutwelcome.enabled": {

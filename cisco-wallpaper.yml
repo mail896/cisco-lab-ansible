@@ -1,0 +1,23 @@
+---
+- name: Desktopbild für das vorhandene lokale cisco-Konto übernehmen
+  hosts: cisco_lab
+  gather_facts: false
+  become: true
+  vars:
+    ansible_ssh_use_tty: false
+  pre_tasks:
+    - name: Explizit ausgewählte LAB-Ziele verlangen
+      ansible.builtin.assert:
+        that:
+          - lab_cisco_wallpaper_confirmed | default(false) | bool
+          - inventory_hostname is match('^LAB-0[1-8][AB]$')
+          - ansible_host == ('10.255.40.' ~ (((inventory_hostname[4:6] | int) - 1) * 2 + (1 if inventory_hostname[-1] == 'A' else 2)))
+    - name: Geräteidentität und eingerichtetes Sammelkonto prüfen
+      ansible.builtin.raw: >-
+        test "$(hostname)" = {{ inventory_hostname | quote }} &&
+        test -f /etc/cisco-lab/local-cisco.json &&
+        test -x /usr/bin/kwriteconfig6
+      changed_when: false
+  tasks:
+    - name: Desktop-Korrektur bereitstellen
+      ansible.builtin.import_tasks: tasks/cisco-wallpaper.yml

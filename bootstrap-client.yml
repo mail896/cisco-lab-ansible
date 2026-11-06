@@ -14,7 +14,7 @@
     ansible_ssh_common_args: >-
       -F /dev/null -o StrictHostKeyChecking=yes -o ConnectTimeout=8
       -o UserKnownHostsFile={{ lab_bootstrap_known_hosts | quote }}
-    bootstrap_teacher_ip: 192.0.2.100
+    bootstrap_teacher_ip: 10.255.40.100
     bootstrap_home: /home/administrator
     bootstrap_ssh_dir: "{{ bootstrap_home }}/.ssh"
     bootstrap_authorized_keys: "{{ bootstrap_ssh_dir }}/authorized_keys"
@@ -30,10 +30,10 @@
           - >-
             inventory_hostname != 'LAB-08B' or
             ((lab_bootstrap_rebuild_08b | default(false) | bool) and
-             ansible_host == '192.0.2.16' and
+             ansible_host == '10.255.40.16' and
              lab_bootstrap_known_hosts != lookup('ansible.builtin.env', 'HOME') + '/.ssh/known_hosts')
           - inventory_hostname is match('^LAB-0[1-8][AB]$')
-          - ansible_host is match('^192\.0\.2\.([1-9]|1[0-6])$')
+          - ansible_host is match('^10\.255\.40\.([1-9]|1[0-6])$')
           - (lab_bootstrap_school_mac | default('')) is match('^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$')
           - (lab_bootstrap_identity_file | default('')) is match('^/')
           - not ansible_check_mode
