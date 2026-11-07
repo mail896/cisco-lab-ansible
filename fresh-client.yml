@@ -65,7 +65,9 @@
         follow: false
         checksum_algorithm: sha256
       loop: >-
-        {{ [{'path': lab_fresh_packettracer_deb, 'sha256': lab_fresh_packettracer_sha256}]
+        {{ [{'path': lab_fresh_packettracer_deb, 'sha256': lab_fresh_packettracer_sha256},
+            {'path': playbook_dir + '/local-private/winbind/ad.so',
+             'sha256': '61fe179121bcc6d3442d1ded9b59e9b5239daae4adc905ac6e487735d81b89e9'}]
            + ([{'path': lab_fresh_veyon_public_key, 'sha256': lab_fresh_veyon_sha256}]
               if (lab_fresh_install_veyon | default(true) | bool) else []) }}
       delegate_to: localhost
@@ -84,17 +86,17 @@
       loop_control:
         label: "{{ item.item.path }}"
 
-    - name: Gruppenmitgliedschaft, Hostidentität und freie lokale Konsole prüfen
+    - name: Hostidentität und freie lokale Konsole vor der ersten Änderung prüfen
       ansible.builtin.command:
         argv:
           - /usr/bin/python3
           - -IB
           - -c
           - |
-            import grp, json, os, pwd, socket, subprocess, sys
+            import json, socket, subprocess, sys
             from pathlib import Path
 
-            host, address, mac, student = sys.argv[1:]
+            host, address, mac = sys.argv[1:]
             if socket.gethostname() != host:
                 raise SystemExit('Hostname stimmt nicht mit dem Manifest überein.')
             release = dict(line.strip().split('=', 1) for line in
@@ -106,11 +108,6 @@
                        any(ip['local'] == address for ip in row.get('addr_info', []))
                        for row in interfaces):
                 raise SystemExit('Schul-IP und verifizierte Schul-MAC passen nicht zusammen.')
-            group = grp.getgrnam('cisco.lab').gr_gid
-            for name, expected in ((student, True), ('administrator', False)):
-                user = pwd.getpwnam(name)
-                if group <= 0 or user.pw_uid == 0 or (group in os.getgrouplist(name, user.pw_gid)) != expected:
-                    raise SystemExit(f'Unerwartete LAB-Gruppenzuordnung für {name}.')
             sessions = subprocess.check_output(['loginctl', 'list-sessions', '--no-legend'], text=True)
             for line in sessions.splitlines():
                 result = subprocess.check_output(['loginctl', 'show-session', line.split()[0],
@@ -120,10 +117,32 @@
                     fields.get('Type') == 'tty' and fields.get('Remote') == 'no')
                 if interactive and fields.get('Class', '').startswith('user'):
                     raise SystemExit('Lokale Sitzung vorhanden. Erst regulär abmelden.')
-            print(group)
+            print('Lokales Gerät und freie Konsole geprüft.')
           - "{{ inventory_hostname }}"
           - "{{ ansible_host }}"
           - "{{ lab_network_manifest.identity.school.mac }}"
+      changed_when: false
+
+    - name: Lokale Verwaltungskonten bei IServ-Freigaben ausnehmen
+      ansible.builtin.import_tasks: tasks/client-pam.yml
+
+    - name: Versionsgebundenen Winbind-Reconnect-Fix vor den LAB-Gruppenprüfungen einrichten
+      ansible.builtin.import_tasks: tasks/winbind.yml
+
+    - name: Gruppenmitgliedschaften mit geprüftem Winbind auflösen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            import grp, os, pwd, sys
+            group = grp.getgrnam('cisco.lab').gr_gid
+            for name, expected in ((sys.argv[1], True), ('administrator', False)):
+                user = pwd.getpwnam(name)
+                if group <= 0 or user.pw_uid == 0 or (group in os.getgrouplist(name, user.pw_gid)) != expected:
+                    raise SystemExit(f'Unerwartete LAB-Gruppenzuordnung für {name}.')
+            print(group)
           - "{{ lab_fresh_student }}"
       register: lab_fresh_preflight
       changed_when: false
@@ -179,6 +198,7 @@
         name:
           - acl
           - desktop-file-utils
+          - ethtool
           - firefox-esr
           - iproute2
           - libcap2-bin
@@ -194,6 +214,9 @@
     - name: Schul- und Laboranschluss trennen
       ansible.builtin.import_role:
         name: lab_network
+
+    - name: Wake-on-LAN am geprüften Schulanschluss einrichten
+      ansible.builtin.import_tasks: tasks/wol.yml
 
     - name: Serielle Konsole und Gerätezugriff installieren
       ansible.builtin.import_role:

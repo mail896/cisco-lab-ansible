@@ -11,12 +11,14 @@ import threading
 import uuid
 
 from dashboard.greeter_refresh import refresh_greeter
-from maintenance.preview import BERLIN
+from dashboard.operation_lock import OperationLock
+from maintenance.preview import BERLIN, pinned_hosts_file
 
 ROOT = Path(__file__).resolve().parents[1]
 LAB_TARGETS = {f'LAB-{number:02d}{side}': f'10.255.40.{2 * number - 1 + offset}'
                for number in range(1, 9) for offset, side in enumerate('AB')}
 PILOTS = {name: LAB_TARGETS[name] for name in ('LAB-08A', 'LAB-08B')}
+ADMISSIONS = ROOT / 'local-private/fresh-clients'
 CISCO_PRIVATE = Path('local-private/cisco-account-vars.json')
 CISCO_FILES = ('tasks/local-cisco.py', 'tasks/local-cisco-nss.c',
                'tasks/local-cisco-runtime.py',
@@ -73,6 +75,11 @@ def catalog():
     ]}
 
 
+def known_hosts_for(host, known_hosts_b):
+    return pinned_hosts_file(ADMISSIONS, host) or (
+        known_hosts_b if host == 'LAB-08B' else Path.home() / '.ssh/known_hosts')
+
+
 def close_control_socket(socket, host):
     if socket.exists():
         try:
@@ -88,7 +95,7 @@ class Deployments:
         self.directory = directory
         self.known_hosts_b = known_hosts_b
         self.appearance = appearance
-        self.lock = threading.Lock()
+        self.lock = OperationLock(directory.parent / 'operation.lock')
         self.plans_lock = threading.Lock()
         self.review_lock = threading.Lock()
         self.plans = {}
@@ -105,11 +112,15 @@ class Deployments:
     def now():
         return datetime.now(BERLIN).isoformat(timespec='seconds')
 
-    def command(self, host, job, *, release=False, rollout_images=None, control_socket=None):
+    def known_hosts_for(self, host):
+        return known_hosts_for(host, self.known_hosts_b)
+
+    def command(self, host, job, *, release=False, rollout_images=None, control_socket=None, known_hosts=None):
         targets = LAB_TARGETS if release else PILOTS
         if host not in targets or job not in JOBS:
             raise ValueError('Nur freigegebene Aufträge auf LAB-08A oder LAB-08B.')
-        known_hosts = self.known_hosts_b if host == 'LAB-08B' else Path.home() / '.ssh/known_hosts'
+        if known_hosts is None:
+            known_hosts = self.known_hosts_for(host)
         key = Path.home() / '.ssh/id_ed25519'
         if not known_hosts or not known_hosts.is_file() or not key.is_file():
             raise ValueError('Verifizierte SSH-Hostdatei oder Verwaltungsschlüssel fehlt.')
@@ -204,6 +215,29 @@ class Deployments:
         runs = [json.loads(path.read_text()) for path in self.directory.glob('*.json')]
         return sorted(runs, key=lambda run: run['started'], reverse=True)[:30]
 
+    def reviewable_history(self):
+        runs = self.history()
+        latest = set()
+        revisions = {}
+        for run in runs:
+            if run['status'] != 'succeeded':
+                continue
+            key = (run['host'], run['job'])
+            superseded = key in latest
+            latest.add(key)
+            if run.get('review'):
+                continue
+            run['superseded'] = superseded
+            if not superseded and run['job'] in JOBS:
+                job = run['job']
+                if job not in revisions:
+                    try:
+                        revisions[job] = self.revision(job)
+                    except (OSError, ValueError):
+                        revisions[job] = None
+                run['source_changed'] = bool(run.get('source_changed')) or run.get('revision') != revisions[job]
+        return runs
+
     @staticmethod
     def validate_id(run_id):
         if len(run_id) != 32 or any(char not in '0123456789abcdef' for char in run_id):
@@ -227,6 +261,9 @@ class Deployments:
                 raise ValueError('Nur technisch erfolgreiche Läufe mit eindeutigem Quellenstand prüfen.')
             if run.get('review'):
                 raise ValueError('Dieser Pilotdeploy wurde bereits bewertet.')
+            current = next((item for item in self.reviewable_history() if item['id'] == run_id), None)
+            if not current or current.get('superseded') or current.get('source_changed'):
+                raise ValueError('Der Lauf wurde ersetzt oder sein Quellenstand hat sich geändert.')
             run['review'] = dict(decision=decision, checks=sorted(selected), note=note.strip(),
                                  reviewed=self.now(), reviewer='lab-admin')
             self.save(run)
@@ -281,7 +318,7 @@ class Deployments:
                     output.write('Quellen während des Laufs geändert. Erneut als Pilot prüfen.\n')
                 if result.returncode == 0 and not source_changed and run['job'] == 'appearance':
                     host = run['host']
-                    known = self.known_hosts_b if host == 'LAB-08B' else Path.home()/'.ssh/known_hosts'
+                    known = self.known_hosts_for(host)
                     logged = Path(output.name).read_text(errors='replace')
                     run['greeter'] = (GREETER_CURRENT if GREETER_CURRENT in logged
                                       else refresh_greeter(host, PILOTS[host], known))

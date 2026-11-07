@@ -80,10 +80,12 @@ def plan_host(probe):
             blocked.update(kernel_removals)
     abi_updates = sorted({name for name in upgrade['install'] if package_name(name) in PATCH_ABI_PACKAGES})
     patch = {PATCH_HASH: 'patched', STOCK_HASH: 'stock'}.get(probe.get('ad_hash'), 'unknown')
-    if probe['occupied']:
+    if probe['occupied'] and not probe.get('evening_restart'):
         action = 'download_only'
     elif upgrade['remove'] or (abi_updates and patch != 'stock'):
         action = 'review'
+    elif probe.get('evening_restart'):
+        action = 'evening_logout_install'
     else:
         action = 'install_if_still_free'
     return dict(action=action, shutdown_eligible=False, patch=patch, abi_updates=abi_updates,
@@ -137,7 +139,10 @@ timer = subprocess.run(['systemctl', 'is-enabled', 'apt-daily-upgrade.timer'],
                        text=True, capture_output=True, timeout=10)
 automatic_apt = dict(periodic_unattended=unattended.group(1) if unattended else None,
                      upgrade_timer=timer.stdout.strip() or 'unknown')
-print(json.dumps(dict(occupied=occupied, automatic_apt=automatic_apt, running_kernel=running_kernel, bootable_kernels=bootable_kernels, dpkg_audit=bool(read('dpkg', '--audit').strip()),
+maintenance = subprocess.run(['systemctl', 'show', 'cisco-lab-maintenance.service', '-p', 'ExecStart', '--value'],
+                             text=True, capture_output=True, timeout=10)
+evening_restart = maintenance.returncode == 0 and '--evening-restart' in maintenance.stdout.split()
+print(json.dumps(dict(occupied=occupied, evening_restart=evening_restart, automatic_apt=automatic_apt, running_kernel=running_kernel, bootable_kernels=bootable_kernels, dpkg_audit=bool(read('dpkg', '--audit').strip()),
                       upgrade=read('apt-get', '-s', '--with-new-pkgs', 'upgrade'),
                       autoremove=read('apt-get', '-s', 'autoremove'),
                       ad_hash=checksum,
@@ -145,13 +150,27 @@ print(json.dumps(dict(occupied=occupied, automatic_apt=automatic_apt, running_ke
 '''
 
 
-def probe_host(name, address, key, known_hosts):
-    command = ['ssh', '-F', '/dev/null', '-o', 'BatchMode=yes', '-o', 'IdentitiesOnly=yes',
-               '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=4', '-i', str(key)]
-    if name == 'LAB-08B' and known_hosts:
-        command.extend(['-o', f'UserKnownHostsFile={known_hosts}'])
-    command.extend([f'administrator@{address}', f'/usr/bin/python3 -IB - {name}'])
+def pinned_hosts_file(directory, host):
+    if not LAB_HOST.fullmatch(host):
+        raise ValueError('Unbekannter LAB-Client.')
+    if directory is None:
+        return None
+    pin = directory / (host + '.active.known_hosts')
+    if pin.exists() or pin.is_symlink():
+        if pin.is_symlink() or not pin.is_file() or pin.stat().st_mode & 0o077:
+            raise ValueError('Die verifizierte SSH-Hostdatei ist nicht geschützt.')
+        return pin
+    return None
+
+
+def probe_host(name, address, key, known_hosts, pin_directory=None):
     try:
+        pin = pinned_hosts_file(pin_directory, name) or (known_hosts if name == 'LAB-08B' else None)
+        command = ['ssh', '-F', '/dev/null', '-o', 'BatchMode=yes', '-o', 'IdentitiesOnly=yes',
+                   '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=4', '-i', str(key)]
+        if pin:
+            command.extend(['-o', f'UserKnownHostsFile={pin}', '-o', 'GlobalKnownHostsFile=/dev/null'])
+        command.extend([f'administrator@{address}', f'/usr/bin/python3 -IB - {name}'])
         result = subprocess.run(command, input=PROBE, text=True, capture_output=True, timeout=65)
         if result.returncode:
             details = result.stderr.strip()
@@ -171,6 +190,7 @@ def main():
     parser.add_argument('--inventory', type=Path, default=Path('inventory.ini'))
     parser.add_argument('--key', type=Path, default=Path.home() / '.ssh/id_ed25519')
     parser.add_argument('--lab08b-known-hosts', type=Path)
+    parser.add_argument('--pin-directory', type=Path)
     args = parser.parse_args()
     inventory = json.loads(subprocess.check_output(
         ['ansible-inventory', '-i', str(args.inventory), '--list'], text=True, timeout=20
@@ -185,7 +205,7 @@ def main():
         parser.error('Schülerclient-Adressen sind nicht eindeutig oder außerhalb des LAB.')
     with ThreadPoolExecutor(max_workers=4) as executor:
         probes = executor.map(
-            lambda target: probe_host(*target, args.key, args.lab08b_known_hosts),
+            lambda target: probe_host(*target, args.key, args.lab08b_known_hosts, args.pin_directory),
             zip(hosts, addresses),
         )
         room = {host: plan_host(probe) for host, probe in zip(hosts, probes)}

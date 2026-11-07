@@ -24,6 +24,26 @@ The local dashboard on LAB-Teacher provides pilot deployments, approval before r
 
 [Lab topology](docs/labornetz.en.svg) · [Live Lab Network dialog](docs/media/lab-08b-network.jpg)
 
+## Baseline and operations: 7 November 2026
+
+The shared baseline now includes the mandatory Winbind reconnect fix, WOL,
+the local classroom account and evening maintenance. The complete LAB-08A run
+passed 206 tasks. The GUI provisions two clients concurrently and resumes at
+phase boundaries.
+
+The central maintenance controller passed a real LAB-08A WOL, update, reboot
+verification and final shutdown trial. Only this pilot is enrolled initially.
+Further clients will follow their gradual reinstallation with nonpersistent
+tmpfs. Teacher-PC wake and its own maintenance remain open. Profile deletion
+has been dropped.
+
+A new encrypted backup was restored in isolation: 356 files, matching SSH key
+and a working dashboard. Root-only system configuration still requires the
+prepared administrator setup. Retention: 90 days plus the latest confirmed
+working backup.
+
+[Installation](docs/media/dashboard-installation.jpg) · [Maintenance results](docs/media/dashboard-maintenance.jpg) · [Backup](docs/media/dashboard-backup.jpg)
+
 ## Repository guide
 
 | Path | Purpose |

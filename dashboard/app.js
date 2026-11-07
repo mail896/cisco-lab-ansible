@@ -16,6 +16,7 @@ for (const view of views) {
 }
 const labels = {
   install_if_still_free: ['Installation möglich', 'good'],
+  evening_logout_install: ['Abendwartung mit Abmeldung und Neustart', 'good'],
   download_only: ['Nur Download', 'warn'],
   wol_candidate: ['WOL-Kandidat', 'warn'],
   review: ['Prüfen', 'warn'],
@@ -31,7 +32,7 @@ function badge(text, color) {
 
 function render(state) {
   el('count-clients').textContent = state.clients.length;
-  el('count-free').textContent = state.counts.install_if_still_free || 0;
+  el('count-free').textContent = (state.counts.install_if_still_free || 0) + (state.counts.evening_logout_install || 0);
   el('count-busy').textContent = state.counts.download_only || 0;
   el('count-review').textContent = (state.counts.review || 0) + (state.counts.wol_candidate || 0) + (state.counts.unknown || 0);
   el('stamp').textContent = state.timestamp ? new Intl.DateTimeFormat('de-DE', {
@@ -64,7 +65,7 @@ function render(state) {
   el('client-rows').replaceChildren(...rows);
   if (!el('host').options.length) {
     for (const client of state.clients) {
-      el('host').add(new Option(client.host, client.host, false, client.host === 'LAB-08B'));
+      el('host').add(new Option(client.host, client.host));
     }
   }
 }
@@ -167,7 +168,7 @@ async function loadPilots() {
       const row = document.createElement('tr');
       const stamp = new Date(run.started).toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
       const job = jobs.get(run.job);
-      for (const value of [stamp, run.host, job.label, pilotStatus[run.status]]) {
+      for (const value of [stamp, run.host, job?.label || run.job, pilotStatus[run.status] || run.status]) {
         const cell = row.insertCell();
         cell.textContent = value;
       }
@@ -183,7 +184,7 @@ async function loadPilots() {
           run.review.note, 'Stand ' + run.revision.slice(0, 12)].filter(Boolean).join(' · ');
         details.append(summary, note);
         review.append(details);
-      } else if (run.status === 'succeeded' && !run.source_changed) {
+      } else if (job && run.status === 'succeeded' && !run.source_changed && !run.superseded) {
         const reviewButton = document.createElement('button');
         reviewButton.type = 'button';
         reviewButton.className = 'button';
@@ -191,7 +192,7 @@ async function loadPilots() {
         reviewButton.addEventListener('click', () => openReview(run, job));
         review.append(reviewButton);
       } else {
-        review.textContent = run.source_changed ? 'Quellen geändert' : '—';
+        review.textContent = run.superseded ? 'Durch neueren Lauf ersetzt' : run.source_changed ? 'Quellen geändert' : '—';
       }
       const button = document.createElement('button');
       button.type = 'button';
@@ -387,7 +388,27 @@ async function loadBackups() {
       const item = document.createElement('li');
       const status = {running: 'Läuft', finished: 'Gesichert', failed: 'Fehlgeschlagen', interrupted: 'Unterbrochen'};
       item.textContent = [new Date(run.started).toLocaleString('de-DE'), status[run.status], run.file,
-        run.data_copy && 'Auf data gesichert', run.copied && 'SCP übertragen', run.error].filter(Boolean).join(' · ');
+        run.pruned_at ? 'Nach Aufbewahrungsfrist entfernt' : run.data_copy && 'Auf data gesichert',
+        run.copied && 'SCP übertragen', run.root_system_copy ? 'Root-Systemdateien enthalten' : 'Ohne rootgeschützte Systemdateien',
+        run.confirmed_good_at && 'Wiederherstellung bestätigt', run.error].filter(Boolean).join(' · ');
+      if (run.status === 'finished' && !run.pruned_at && !run.confirmed_good_at) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'button log-button';
+        button.textContent = 'Wiederherstellung bestätigen';
+        button.disabled = busy;
+        button.addEventListener('click', () => confirmCatalog(
+          'Diese Sicherung wurde erfolgreich wiederhergestellt und der Wiederherstellungsschlüssel ist extern verwahrt?',
+          async () => {
+            try {
+              await request('/api/backup/confirm', {run_id: run.id, confirmed: true});
+              await loadBackups();
+            } catch (error) {
+              el('backup-status').textContent = error.message;
+            }
+          }, 'Als funktionierend bestätigen'));
+        item.append(' ', button);
+      }
       return item;
     }));
     if (busy) backupPolling = setTimeout(loadBackups, 2400);

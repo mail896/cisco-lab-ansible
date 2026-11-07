@@ -43,6 +43,10 @@ tbody tr:last-child > * { border-bottom: 0; }
 form { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
 form label { font-weight: 650; }
 select { border: 1px solid #cbd7e3; background: white; border-radius: 8px; color: inherit; padding: 9px 10px; font: inherit; }
+#bootstrap-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+#bootstrap-form input { border: 1px solid #cbd7e3; border-radius: 8px; padding: 9px 10px; font: inherit; }
+#fresh-form fieldset { border: 1px solid #cbd7e3; border-radius: 8px; }
+#fresh-targets > div { display: flex; gap: 1.2rem; flex-wrap: wrap; }
 #tasks { max-height: 300px; overflow: auto; background: #f2f5f8; border-radius: 7px; padding: 12px 20px 12px 38px; }
 #tasks li { padding: 2px 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }

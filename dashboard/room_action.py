@@ -42,6 +42,15 @@ def home_mounted():
                for line in read('findmnt', '-n', '-o', 'TARGET').splitlines())
 
 
+def request_logout(uid, gid):
+    runtime = f'/run/user/{uid}'
+    subprocess.run([
+        'setpriv', f'--reuid={uid}', f'--regid={gid}', '--init-groups',
+        'env', f'XDG_RUNTIME_DIR={runtime}', f'DBUS_SESSION_BUS_ADDRESS=unix:path={runtime}/bus',
+        'busctl', '--user', 'call', 'org.kde.Shutdown', '/Shutdown', 'org.kde.Shutdown', 'logout',
+    ], check=True, timeout=15)
+
+
 def maintenance_running():
     for unit in ('cisco-lab-maintenance.service', 'apt-daily.service', 'apt-daily-upgrade.service'):
         state = read('systemctl', 'show', '-p', 'ActiveState', '--value', unit)
@@ -205,12 +214,7 @@ def main():
             print('Übersprungen: Mehrere lokale Sitzungen.')
             return
         session, user, _ = people[0]
-        runtime = f'/run/user/{user.pw_uid}'
-        subprocess.run([
-            'setpriv', f'--reuid={user.pw_uid}', f'--regid={user.pw_gid}', '--init-groups',
-            'env', f'XDG_RUNTIME_DIR={runtime}', f'DBUS_SESSION_BUS_ADDRESS=unix:path={runtime}/bus',
-            'busctl', '--user', 'call', 'org.kde.Shutdown', '/Shutdown', 'org.kde.Shutdown', 'logout',
-        ], check=True, timeout=15)
+        request_logout(user.pw_uid, user.pw_gid)
         for _ in range(15):
             if session not in session_ids() and not home_mounted():
                 print('Abmeldung und Ende der Home-Einbindung bestätigt.')

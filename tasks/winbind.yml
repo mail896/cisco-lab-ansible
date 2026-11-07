@@ -1,0 +1,58 @@
+---
+- name: Benannten LAB-Client mit passender Inventaradresse verlangen
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname is match('^LAB-0[1-8][AB]$')
+      - ansible_host == ('10.255.40.' ~ (((inventory_hostname[4:6] | int) - 1) * 2 + (1 if inventory_hostname[-1] == 'A' else 2)))
+      - not ansible_check_mode
+
+- name: Geprüfte Winbind-Artefaktbeschreibung einlesen
+  ansible.builtin.set_fact:
+    lab_winbind_manifest: "{{ lookup('ansible.builtin.file', playbook_dir + '/tasks/winbind/manifest.json') | from_json }}"
+
+- name: Lokales Winbind-Modul vor der Übertragung prüfen
+  ansible.builtin.stat:
+    path: "{{ lab_winbind_candidate | default(playbook_dir + '/local-private/winbind/ad.so') }}"
+    follow: false
+    checksum_algorithm: sha256
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  register: lab_winbind_artifact
+
+- name: Exakt den geprüften Modulkandidaten verlangen
+  ansible.builtin.assert:
+    that:
+      - lab_winbind_artifact.stat.isreg | default(false)
+      - lab_winbind_artifact.stat.checksum | default('') == lab_winbind_manifest.candidate_sha256
+
+- name: Geprüften Modulkandidaten binärsicher einlesen
+  ansible.builtin.slurp:
+    src: "{{ lab_winbind_candidate | default(playbook_dir + '/local-private/winbind/ad.so') }}"
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  register: lab_winbind_binary
+
+- name: Versionsgebundenen Winbind-Fix mit Sicherung und Rückfall installieren
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -IB
+      - -c
+      - "{{ lookup('ansible.builtin.file', playbook_dir + '/tasks/winbind/install.py') }}"
+    stdin: >-
+      {{ {'host': inventory_hostname,
+          'student': lab_winbind_student | default(lab_fresh_student | default('s.test')),
+          'manifest': lab_winbind_manifest, 'candidate': lab_winbind_binary.content,
+          'patch': lookup('ansible.builtin.file', playbook_dir + '/tasks/winbind/retry-on-closed-ldap.patch', rstrip=false)} | to_json }}
+  register: lab_winbind_result
+  changed_when: "'Winbind-Patch installiert und geprüft.' in lab_winbind_result.stdout"
+
+- name: Ergebnis der Winbind-Prüfung ausweisen
+  ansible.builtin.debug:
+    msg: "{{ lab_winbind_result.stdout_lines }}"

@@ -1,0 +1,11 @@
+---
+- import_playbook: fresh-client.yml
+
+- import_playbook: local-cisco.yml
+  vars:
+    lab_cisco_host: "{{ lab_fresh_host }}"
+
+- import_playbook: maintenance-client.yml
+  vars:
+    lab_maintenance_host: "{{ lab_fresh_host }}"
+    lab_maintenance_enable_timer: true

@@ -24,6 +24,26 @@ Auf LAB-Teacher können Lehrkräfte Ansible-Aufgaben prüfen, auf einem Pilotrec
 
 [Netzplan](docs/labornetz.svg) · [Live-Screenshot des Labornetz-Dialogs](docs/media/lab-08b-network.jpg)
 
+## Baseline und Betrieb: 7. November 2026
+
+Die gemeinsame Baseline enthält jetzt den verpflichtenden Winbind-Reconnect-Fix,
+WOL, das lokale Sammelkonto und die Abendwartung. Der vollständige Lauf auf
+LAB-08A bestand mit 206 erfolgreichen Aufgaben. Die GUI kann zwei neue Clients
+parallel einrichten und an Phasengrenzen fortsetzen.
+
+Die zentrale Wartungssteuerung bestand auf LAB-08A WOL, Installation,
+Neustartnachweis und anschließendes Ausschalten. Zunächst ist nur dieser Pilot
+registriert. Die weitere Einführung erfolgt nach schrittweiser Neuinstallation
+mit nichtpersistentem tmpfs. Teacher-Aufwachen und seine eigene Wartung sind noch
+offen. Die Profil-Löschfunktion entfällt.
+
+Eine neue verschlüsselte Sicherung wurde isoliert wiederhergestellt: 356 Dateien,
+passender SSH-Schlüssel und funktionsfähiger Dashboard-Start. Rootgeschützte
+Systemdateien benötigen noch die vorbereitete Admin-Einrichtung. Rotation:
+90 Tage plus letzte bestätigte funktionierende Sicherung.
+
+[Installationsfolge](docs/media/dashboard-installation.jpg) · [Wartungsergebnisse](docs/media/dashboard-maintenance.jpg) · [Sicherung](docs/media/dashboard-backup.jpg)
+
 ## Dateien im Repository
 
 | Pfad | Zweck |

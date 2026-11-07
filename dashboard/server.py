@@ -21,7 +21,7 @@ import threading
 from dashboard.appearance import Appearance
 from dashboard.appearance_release import AppearanceRelease
 from dashboard.backup import Backups
-from dashboard.deploy import Deployments, catalog
+from dashboard.deploy import ADMISSIONS, Deployments, catalog
 from dashboard.provision import ENTRIES, Provision, source
 from dashboard.room import ACTIONS, SCOPES, RoomActions
 from maintenance.preview import BERLIN, start_allowed
@@ -79,7 +79,7 @@ class Dashboard:
 
     def _refresh(self):
         try:
-            command = [sys.executable, '-B', '-m', 'maintenance.preview']
+            command = [sys.executable, '-B', '-m', 'maintenance.preview', '--pin-directory', str(ADMISSIONS)]
             if self.known_hosts:
                 command += ['--lab08b-known-hosts', str(self.known_hosts)]
             result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True,
@@ -104,7 +104,7 @@ class Dashboard:
 def deployment_plan(host):
     if host not in HOSTS:
         raise ValueError('Bitte einen LAB-Client auswählen.')
-    args = ['ansible-playbook', '-i', 'inventory.ini', '--limit', host, '--list-tasks', 'fresh-client.yml']
+    args = ['ansible-playbook', '-i', 'inventory.ini', '--limit', host, '--list-tasks', 'lab-baseline.yml']
     result = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, timeout=15, check=True)
     tasks = [line.split('\tTAGS:', 1)[0].strip()
              for line in result.stdout.splitlines() if '\tTAGS:' in line]
@@ -162,10 +162,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Content-Security-Policy', "default-src 'self'; object-src 'none'; frame-ancestors 'none'")
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != 'HEAD':
+            self.wfile.write(body)
 
     def _json(self, status, data):
         self._send(status, json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8')
+
+    def do_HEAD(self):
+        self.do_GET()
 
     def do_GET(self):
         if not self._trusted_request():
@@ -195,9 +199,21 @@ class Handler(BaseHTTPRequestHandler):
             except FileNotFoundError:
                 return self._json(404, {'error': 'Installationsprotokoll nicht gefunden.'})
             return self._json(200, {'output':output})
-        if self.path == '/api/maintenance':
+        if self.path == '/api/maintenance-runs':
+            from maintenance.controller import history, targets
             try:
-                return self._json(200, self.server.provision.maintenance_state())
+                return self._json(200, {'runs': history()[:20], 'enrolled': sorted(targets())})
+            except (OSError, ValueError):
+                return self._json(503, {'error': 'Zentrale Wartungsergebnisse konnten nicht gelesen werden.'})
+        if self.path == '/api/maintenance-hosts':
+            try:
+                return self._json(200, {'hosts': self.server.provision.maintenance_hosts()})
+            except (OSError, ValueError):
+                return self._json(503, {'error': 'Wartungsregistrierung konnte nicht gelesen werden.'})
+        if self.path == '/api/maintenance' or self.path.startswith('/api/maintenance/'):
+            try:
+                host = self.path.rsplit('/', 1)[-1] if self.path.startswith('/api/maintenance/') else 'LAB-08B'
+                return self._json(200, self.server.provision.maintenance_state(host))
             except (OSError,ValueError,subprocess.SubprocessError):
                 return self._json(503, {'error': 'Wartungsstatus konnte nicht geladen werden.'})
         if self.path == '/api/appearance/rollout':
@@ -216,7 +232,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == '/api/room':
             return self._json(200, dict(actions=ACTIONS, scopes=SCOPES, runs=self.server.room.history()))
         if self.path == '/api/pilot':
-            return self._json(200, dict(catalog(), runs=self.server.deployments.history()))
+            return self._json(200, dict(catalog(), runs=self.server.deployments.reviewable_history()))
         if self.path.startswith('/api/pilot/log/'):
             try:
                 output = self.server.deployments.output(self.path.rsplit('/', 1)[-1])
@@ -237,7 +253,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             length = int(self.headers.get('Content-Length', '0'))
-            if not 0 < length <= 1024 or self.headers.get_content_type() != 'application/json':
+            limit = 4096 if self.path == '/api/fresh/bootstrap' else 1024
+            if not 0 < length <= limit or self.headers.get_content_type() != 'application/json':
                 raise ValueError('Ungültige Anfrage.')
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload, dict):
@@ -262,9 +279,26 @@ class Handler(BaseHTTPRequestHandler):
                         payload['run_id'], False, payload['confirmed'], job=payload['job'], retry=payload['retry'])
                     return self._json(202 if run else 409, run or {'error':'Ein Verwaltungsauftrag läuft.'})
             if self.path == '/api/fresh/start' and set(payload) == {'host','confirmed'} and isinstance(payload['host'],str):
+                run=self.server.provision.fresh_start([{'host': payload['host'], 'veyon': False}], payload['confirmed'])
+                return self._json(202 if run else 409, run or {'error':'Ein Verwaltungsauftrag läuft.'})
+            if self.path == '/api/fresh/start' and set(payload) == {'targets','confirmed'}:
                 run=self.server.provision.fresh_start(**payload)
                 return self._json(202 if run else 409, run or {'error':'Ein Verwaltungsauftrag läuft.'})
-            if self.path == '/api/maintenance/start' and set(payload) == {'confirmed'}:
+            if self.path == '/api/fresh/bootstrap' and set(payload) == {
+                'host', 'fingerprint', 'ssh_password', 'sudo_password', 'confirmed',
+            }:
+                run=self.server.provision.bootstrap_start(**payload)
+                return self._json(202 if run else 409, run or {'error':'Ein Verwaltungsauftrag läuft.'})
+            if self.path in ('/api/fresh/retry', '/api/fresh/stop') and set(payload) == {'run_id', 'confirmed'}:
+                if isinstance(payload['run_id'], str):
+                    method = self.server.provision.retry if self.path.endswith('/retry') else self.server.provision.stop
+                    run = method(**payload)
+                    return self._json(202 if run else 409, run or {'error':'Ein Verwaltungsauftrag läuft.'})
+            if self.path == '/api/profiles/preview' and set(payload) == {'host'} and isinstance(payload['host'], str):
+                return self._json(200, self.server.provision.profile_preview(payload['host']))
+            if self.path == '/api/maintenance/start' and set(payload) in ({'confirmed'}, {'host', 'confirmed'}):
+                if 'host' in payload and not isinstance(payload['host'], str):
+                    raise ValueError('Ungültiger Wartungsclient.')
                 run=self.server.provision.maintenance_start(**payload)
                 return self._json(202 if run else 409, run or {'error':'Ein Verwaltungsauftrag läuft.'})
             if self.path == '/api/appearance/rollout/start' and set(payload) in (
@@ -291,6 +325,10 @@ class Handler(BaseHTTPRequestHandler):
                 if run:
                     return self._json(202, run)
                 return self._json(409, {'error': 'Ein anderer Verwaltungsauftrag läuft bereits.'})
+            if self.path == '/api/backup/confirm' and set(payload) == {'run_id', 'confirmed'}:
+                if payload['confirmed'] is not True or not isinstance(payload['run_id'], str):
+                    raise ValueError('Wiederherstellung ausdrücklich bestätigen.')
+                return self._json(200, self.server.backups.confirm(payload['run_id']))
             if self.path == '/api/room/start' and set(payload) == {'action', 'scope', 'confirmed'}:
                 if all(isinstance(payload[key], str) for key in ('action', 'scope')):
                     run = self.server.room.start(**payload)

@@ -1,13 +1,16 @@
-# LAB-Paketwartung
+# Paketwartung
 
 **Deutsch** · [English](wartung-vorschau.en.md)
 
-Die Vorschau läuft lesend von LAB-Teacher aus. Sie prüft per SSH die vorhandenen Paketlisten, aktive Sitzungen, geplante Paketentfernungen und startfähige Kernel.
+Die lesende Vorschau prüft Paketstatus, Sitzungen, vorgeschlagene Entfernungen,
+bootfähige Kernel und den versionsgebundenen Winbind-Fix. Der neue Abendmodus
+meldet Nutzer regulär ab, prüft das Sitzungsende, installiert und startet nach
+Erfolg immer neu. Startfenster: Mo–Fr 18–20 Uhr Europe/Berlin. Begonnene
+Transaktionen dürfen fertig werden. Fehler lassen den Client eingeschaltet.
 
-```bash
-python3 -B -m maintenance.preview --lab08b-known-hosts "$lab08b_known_hosts"
-```
+Der neue Modus und der zentrale WOL-/Neustart-/Ausschalttest sind auf LAB-08A
+bestanden. LAB-08B behält den bisherigen Vergleichsmodus mit Download bei belegter
+Sitzung. Weitere Clients folgen ihrer Neuinstallation. Teacher-Verfügbarkeit und
+sein eigener Aktualisierungsablauf sind separat offen.
 
-Das Wartungsfenster ist werktags von 18:00 bis 20:00 Uhr in Europe/Berlin. Ein begonnener Lauf darf fertig werden. Bei einer aktiven Anmeldung oder eingebundenem IServ-Home lädt der Wartungspilot Pakete nur herunter und verschiebt die Installation. Auf einem freien Rechner prüft er die Transaktion, schützt die LAB-Software und den versionsgebundenen Winbind-Patch und startet nur bei Bedarf neu.
-
-Wenn `autoremove` die LAB-Software, den laufenden Kernel oder den letzten startfähigen Ersatzkernel gefährdet, wird die Paketentfernung ausgesetzt. Vorschau und Paketstand zunächst auf dem Wartungspilot prüfen, bevor der Ablauf auf weitere Rechner ausgeweitet wird.
+[Bedienung und technischer Stand](dashboard.md#abendwartung)

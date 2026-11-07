@@ -1,0 +1,60 @@
+---
+- name: Bekannten PAM-Sitzungsaufbau und Modulverfügbarkeit prüfen
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -IB
+      - -c
+      - |
+        from pathlib import Path
+        import re
+        path = Path('/etc/pam.d/common-session')
+        lines = [line.strip() for line in path.read_text().splitlines()
+                 if line.strip() and not line.lstrip().startswith('#')]
+        mounts = [i for i, line in enumerate(lines) if 'pam_mount.so' in line]
+        if len(mounts) != 1 or not re.fullmatch(r'session\s+optional\s+pam_mount\.so', lines[mounts[0]]):
+            raise SystemExit('Unbekannter pam_mount-Aufbau. Keine PAM-Änderung.')
+        guard = 'session [success=1 default=ignore] pam_localuser.so'
+        if any('pam_localuser.so' in line and (i != mounts[0] - 1 or line != guard)
+               for i, line in enumerate(lines)):
+            raise SystemExit('Abweichende lokale PAM-Sitzungsregel. Manuell prüfen.')
+        if not Path('/usr/lib/x86_64-linux-gnu/security/pam_localuser.so').is_file():
+            raise SystemExit('pam_localuser.so fehlt.')
+  changed_when: false
+
+- name: Nur lokale Konten beim unmittelbar folgenden pam_mount ausnehmen
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-session
+    insertbefore: '^session\s+optional\s+pam_mount\.so\s*$'
+    line: 'session [success=1 default=ignore] pam_localuser.so'
+    backup: true
+
+- name: Ausschließlich einen leeren irrtümlichen RAM-Mount des lokalen Administrators aushängen
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -IB
+      - -c
+      - |
+        from pathlib import Path
+        import json, subprocess
+        path = Path('/var/lib/iserv/client/home/administrator')
+        result = subprocess.run(['findmnt', '-J', '-M', str(path), '-o', 'TARGET,FSTYPE'],
+                                text=True, capture_output=True, timeout=10)
+        if result.returncode == 1:
+            print('Kein irrtümlicher Administrator-Mount vorhanden.')
+            raise SystemExit(0)
+        if result.returncode != 0:
+            raise SystemExit('Administrator-Mount ist nicht eindeutig prüfbar.')
+        rows = json.loads(result.stdout)['filesystems']
+        local = next(line.split(':') for line in Path('/etc/passwd').read_text().splitlines()
+                     if line.startswith('administrator:'))
+        if (len(rows) != 1 or rows[0]['target'] != str(path) or rows[0]['fstype'] != 'tmpfs'
+                or rows[0].get('children') or local[5] != '/home/administrator'
+                or path.is_symlink() or path.resolve() != path
+                or path.stat().st_uid != int(local[2]) or any(path.iterdir())):
+            raise SystemExit('Administrator-Mount enthält Daten oder ist nicht eindeutig. Manuell prüfen.')
+        subprocess.run(['umount', '--', str(path)], check=True, timeout=15)
+        print('Leeren irrtümlichen Administrator-Mount ausgehängt.')
+  register: lab_local_admin_mount
+  changed_when: "'Leeren irrtümlichen Administrator-Mount ausgehängt.' in lab_local_admin_mount.stdout"

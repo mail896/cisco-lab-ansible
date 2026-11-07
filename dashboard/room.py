@@ -105,16 +105,16 @@ class RoomActions:
             self.deploys.lock.release()
             raise
 
-    def on_host(self, host, action, wake):
+    def on_host(self, host, action, wake, *, maintenance_owner=False):
         now = datetime.now(BERLIN)
-        if (host == 'LAB-08B' and action != 'wake' and now.weekday() < 5
+        if (not maintenance_owner and host == 'LAB-08B' and action != 'wake' and now.weekday() < 5
                 and (17, 45) <= (now.hour, now.minute) < (20, 0)):
             return 'Übersprungen: Für automatische Wartung reserviert.'
         try:
             if action == 'wake':
                 macs, route = wake
                 return self.wake(macs[host], route)
-            known = self.deploys.known_hosts_b if host == 'LAB-08B' else Path.home()/'.ssh/known_hosts'
+            known = self.deploys.known_hosts_for(host)
             if not known or not known.is_file():
                 return 'Fehler: Verifizierte SSH-Hostdatei fehlt.'
             loader = "import sys; source = sys.stdin.read(); exec(compile(source, '<room-action>', 'exec'))"

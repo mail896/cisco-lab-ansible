@@ -138,7 +138,7 @@ class AppearanceRelease:
             already_current = job == JOB and IMAGE_CURRENT in result.stdout
             status = 'Bild installiert. Bildstand war bereits aktuell.' if already_current else 'Bild installiert.'
             if refresh and GREETER_CURRENT not in result.stdout:
-                known = self.deployments.known_hosts_b if host == 'LAB-08B' else Path.home()/'.ssh/known_hosts'
+                known = self.deployments.known_hosts_for(host)
                 try:
                     return status + ' ' + refresh_greeter(host,LAB_TARGETS[host],known)
                 except (OSError,subprocess.SubprocessError):

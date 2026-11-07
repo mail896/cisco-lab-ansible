@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 
 
@@ -45,9 +46,13 @@ def main():
 
     command = ['ansible-playbook', '-i', 'inventory.ini', '--limit', args.host]
     if args.plan:
-        for playbook in ('bootstrap-client.yml', 'fresh-client.yml'):
+        for playbook in ('bootstrap-client.yml', 'lab-baseline.yml'):
             subprocess.run(command + ['--list-hosts', playbook], cwd=REPOSITORY, check=True)
         return
+
+    private = REPOSITORY / 'local-private/cisco-account-vars.json'
+    if private.is_symlink() or not private.is_file() or private.stat().st_mode & 0o077:
+        raise SystemExit('Private cisco-Kontovorgabe fehlt oder ist nicht geschützt.')
 
     bootstrap_settings = dict(
         lab_bootstrap_host=args.host,
@@ -70,9 +75,12 @@ def main():
         print(f'{args.host} kann jetzt einmalig unter Neuinstallation gestartet werden.')
         return
 
-    subprocess.run(command + ['fresh-client.yml', '--private-key', str(identity_file),
-                             '-e', f'@{variables}', '-e',
-                             json.dumps({'lab_fresh_known_hosts': str(known_hosts)})],
+    subprocess.run(command + ['lab-baseline.yml', '--private-key', str(identity_file),
+                             '-e', f'@{variables}', '-e', '@'+str(private), '-e',
+                             json.dumps({'lab_fresh_known_hosts': str(known_hosts),
+                                         'ansible_ssh_common_args': '-F /dev/null -o BatchMode=yes '
+                                         '-o StrictHostKeyChecking=yes -o IdentitiesOnly=yes '
+                                         '-o UserKnownHostsFile=' + shlex.quote(str(known_hosts))})],
                    cwd=REPOSITORY, check=True)
 
 

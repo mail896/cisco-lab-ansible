@@ -1,0 +1,5 @@
+---
+- import_playbook: maintenance-client.yml
+  vars:
+    lab_maintenance_host: LAB-08A
+    lab_maintenance_enable_timer: false

@@ -1,54 +1,133 @@
-# Teacher dashboard operations
+# Local LAB management
 
 [Deutsch](dashboard.md) · **English**
 
-The dashboard runs on LAB-Teacher as a local Python service. It uses the teacher's verified SSH identity for the LAB clients. Keep the HTTP listener on loopback and use an authenticated HTTPS reverse proxy if operators need remote access. The included nginx and Caddy files are configuration examples.
+Updated 7 November 2026. The dashboard runs on LAB-Teacher as the `marc`
+systemd user service. HTTPS passes through Caddy and nginx to a loopback-only
+Python service. Its web account is `lab-admin`; the password is stored locally
+in `~/.local/state/cisco-lab-dashboard/passwort`. Credentials stay out of Git.
+The dashboard does not modify the central IServ server.
 
-Start the service from the repository as the management user:
+## Pilot and classroom deployment
 
-```bash
-python3 -B -m dashboard.server \
-  --report "$lab_maintenance_report" \
-  --lab08b-known-hosts "$lab08b_known_hosts"
-```
+1. Select LAB-08A/B and the job under **Pilot deployments** and review its tasks.
+2. Use an idle test workstation for desktop, session and package changes.
+   The client checks active sessions, IServ mounts and package maintenance.
+   Any explicitly requested normal logout must finish before installation.
+3. Run the pilot and inspect its persistent Ansible log.
+4. Test the listed checks and accept the latest successful pilot of the current
+   source revision. A source change requires a new pilot. Older runs remain in
+   history and do not replace current acceptance.
+5. Deploy the accepted revision under **Playbooks** or **Desktop images**.
+   Results are recorded per workstation; pending hosts can receive the same
+   approved revision later.
 
-The variables point to the private maintenance report and the separately verified SSH host-key file for LAB-08B. Open `http://127.0.0.1:8765` on LAB-Teacher.
+YAML is maintained separately. The GUI exposes predefined jobs and settings.
+The GUI and scheduled controller share a cross-process management lock.
 
-## A dashboard built for this lab
+## Provisioning a fresh IServ image
 
-The lab deliberately uses its own dashboard instead of Semaphore. It follows the classroom workflow. Teachers select reviewed jobs and specific workstations, test on LAB-08A or LAB-08B, then release that same revision to the room.
+1. The operator installs Debian 13 KDE through IServ. The chosen student-home
+   mode is `tmpfs (non persistent)`. The internal NIC needs the school DHCP
+   address and default route. Image installation can require temporarily
+   unplugging the USB lab NIC.
+2. Independently verify the new ED25519 fingerprint at the client. A changed
+   host key is not trusted automatically. Review the private hardware manifest,
+   including both NICs, connection UUIDs and MAC addresses.
+3. Use the GUI's fresh-installation SSH admission with the known local
+   administrator password. Passwords are not saved in JSON state or run logs.
+   Admission subsequently verifies key access and sudo.
+4. Start installation for the prepared targets. Two clients can run in parallel;
+   additional clients wait in the queue. Stop requests take effect between
+   completed phases and never kill an active package transaction.
+5. Test local `cisco` and IServ sign-in, Files access, wallpaper, an icon-free
+   desktop, lab networking, serial console and Wireshark.
 
-- Client status and the latest maintenance preview for all 16 workstations. [Overview](media/dashboard-overview.jpg)
-- Select a test workstation and job, preview the tasks and record the practical acceptance alongside the run log. [Pilot deployments](media/dashboard-pilots.jpg)
-- Select the KDE wallpaper and SDDM login image. The room deployment reports the result for each workstation. [Desktop images](media/dashboard-images.jpg)
+The shared `lab-baseline.yml` contains:
 
-## Pilot, review and release
+| Phase | Components |
+| --- | --- |
+| Base | local PAM separation, mandatory Winbind fix, networking, WOL, serial tools, Wireshark, Packet Tracer, KDE, U-Zeiten, Firefox and optional Veyon |
+| Classroom account | local `cisco`, LAB permissions, desktop policy and no SSH access |
+| Maintenance | evening policy, APT coordination, timer and controller registration |
 
-1. Choose an operation and one test workstation, LAB-08A or LAB-08B.
-2. Review the generated Ansible task list and start the pilot. The dashboard records the source revision, images and output.
-3. Test the expected behaviour at the workstation, then record the acceptance in the dashboard.
-4. Start the room rollout for the accepted revision. Check each client's result and retry pending targets for that revision.
+The GUI resumes at phase boundaries. Retrying failed maintenance does not rerun
+an already successful base or classroom-account phase. The CLI uses the same
+components. A full LAB-08A run completed 206 tasks without failures. A new
+end-to-end GUI run on another freshly imaged workstation is still pending after
+these latest changes; queue and recovery behavior have local regression tests.
 
-Image deployment checks SHA-256, ownership, file permissions and the relevant KDE and SDDM settings. A matching client skips image transfers and snapshots. On a change, the previous files are snapshotted. Each changed image is sent once and copied into the run's backup on the client. An immediate greeter refresh requires a free local console. The existing desktop session sees a new wallpaper at its next sign-in.
+## Winbind and local accounts
 
-## IServ desktop and wallpaper
+The version-bound reconnect fix is mandatory. Installation checks the exact
+supported Samba version and known stock/patched module hashes, backs up the
+original, installs atomically and verifies user lookup, LAB membership, machine
+trust and the loaded module. Failed verification restores the original.
+Unknown versions are not overwritten. The binary and account configuration are
+local inputs and are not published.
 
-The LAB group gets the KDE theme at session startup. The desktop helper converts existing Plasma layouts to the plain desktop view. Files in `Files/Desktop` remain available in the file manager, and the desktop stays clear of file icons. The desktop context menu is locked in LAB sessions. These settings take effect at the next sign-in.
+Only local `/etc/passwd` accounts skip the IServ home-mount PAM step. Directory
+users continue to use the existing IServ integration. This prevents accidental
+IServ RAM homes for the local management administrator.
 
-For existing workstations, a [targeted correction playbook](../block01-desktop-first-login.yml) requires explicit target approval. The baseline uses the same Plasma wallpaper defaults.
+## Evening maintenance
 
-## Fresh installation
+The start window is Monday–Friday, 18:00–20:00 Europe/Berlin. Transactions already
+in progress may finish. The new mode first requests normal logout and checks
+session completion and leftover RAM-home mounts. It then installs updates,
+performs guarded package cleanup and always reboots after success. Failures
+leave the workstation on. Ambiguous leftover mounts in archive mode are retained
+for investigation.
 
-1. Install the Debian 13 KDE image through IServ. The internal network adapter must carry the school DHCP address and default route.
-2. Verify the newly installed host's SSH fingerprint. Prepare a private client manifest with the device identity, USB adapter, package inputs and target host.
-3. Run the SSH admission stage on LAB-Teacher with `baseline-client.py --dashboard` and the reviewed host and manifest arguments. It prompts for the local administrator credentials.
-4. In the dashboard, select that single workstation under fresh installation. This applies the baseline and provisions the local classroom account.
-5. After reboot, verify an IServ sign-in, Files access, the lab dialog and a separate local classroom sign-in. Check the desktop, serial console and Wireshark. Assess any version-bound Winbind workaround separately.
+The new policy is active on LAB-08A. LAB-08B retains the earlier comparison
+policy, which downloads only while a session is occupied. Other clients will be
+registered after their gradual reinstallation. Ordinary logout does not yet
+reliably provide a new empty RAM home every time; reboot removes it. Files and
+Groups remain on IServ. The profile-deletion feature has been dropped.
 
-The public sample inventory and network manifests are starting points. Keep the live inventory, verified host-key files, manifests, the classroom password hash and other runtime credentials in the local installation. The local classroom account playbook requires a locally generated password hash and an explicit decision about a matching directory account.
+The central controller accepts only enrolled workstations with a checked school
+MAC and pinned SSH key. It sends WOL if needed, monitors maintenance and proves
+the reboot using a changed boot ID. Only a demonstrably newly woken, still idle
+workstation may then power off. Clients successfully handled today are not woken
+again for another scheduled run. Results appear on the maintenance page. The real
+LAB-08A WOL/maintenance/reboot/shutdown trial passed. Central scheduling is enabled
+for this enrolled pilot; automatic teacher-PC wake and operation without a KDE
+session still need to be secured separately.
+
+## Room actions and images
+
+Room actions provide Magic-Packet WOL, normal student logout, reboot/shutdown
+of idle workstations and one-time sign-in of the local `cisco` account. They do
+not use Veyon remote control. Deferred power actions recheck sessions, mounts
+and maintenance immediately before execution.
+
+PNG/JPEG images are selected from `~/Bilder/CISCO-LAB`. Saving the selection does
+not deploy it. Pilot, acceptance and room rollout install the approved revision.
+Desktop and lock images are separate; the lock image is also used by SDDM.
+An idle greeter can refresh immediately. The desktop updates at the next sign-in.
+Unchanged image revisions skip retransmission and another snapshot.
 
 ## Encrypted backup
 
-The backup job captures the project tree, dashboard service and drop-in configuration, dashboard credential, wallpaper library and selection, deployment and room logs, and local SSH material needed for recovery. The archive is encrypted and saved on the local data volume. An optional SCP copy can be enabled for the configured backup host. The SCP credential is excluded from the archive.
+New backups contain project sources, private configuration, SSH material,
+wallpaper library, user services and dashboard state including credentials and
+run history. Encrypted archives reside on `data/backup_data`; optional SCP sends
+the archive and SHA-256 file to the configured macOS host. The SCP password file
+and recovery key are excluded. Store the recovery key separately off the teacher PC.
 
-Store the backup recovery key separately and verify a restore on a disposable machine. Reverse-proxy TLS material that is readable only by root, the recovery key itself and the off-host proxy configuration need their own recovery procedure. GitHub is a source publication and is separate from the operational backup.
+The 7 November archive was restored in isolation: 356 files, matching SSH key
+and a restored dashboard returning HTTP 200. This tests configuration recovery,
+not a complete replacement computer. Older 6 November backups do not include
+complete dashboard state.
+
+Root-only TLS/Veyon configuration requires the fixed
+`maintenance/teacher-backup-system.py` exporter and an exact no-argument sudo
+allowlist. Teacher setup is prepared and still requires the administrator to
+run it. Each backup record shows whether this system export was included.
+The dashboard user service must permit that specific sudo invocation.
+
+Retention preserves 90 days plus the latest explicitly confirmed working
+backup. Without confirmation, the newest successful backup is preserved.
+Confirmation requires a matching checksum. Only known archive pairs are pruned;
+failed off-host pruning preserves the local copy. Public GitHub sources and
+documentation are separate from operational recovery backups.

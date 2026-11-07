@@ -1,0 +1,150 @@
+CISCO-LAB – AKTUELLER PROJEKTSTAND UND ARBEITSREIHENFOLGE
+Stand 07.11.2026. Diese Übersicht ersetzt die Aufgabenlisten in älteren
+chronologischen Testprotokollen. Historische Befunde bleiben dort erhalten.
+
+ZIEL
+Neu installierte und vorhandene Schülerclients erhalten dieselbe geprüfte
+LAB-Basis. Die lokale Webverwaltung startet Pilot und Raumverteilung,
+Wartung, Sammelaktionen, Bilder und Sicherungen. Abschluss mit einer
+übersichtlichen GUI und gepflegter deutscher/englischer Dokumentation.
+Nutzervorgabe vom 07.11.2026: Optik und Workflow-Vereinfachung der GUI
+am Ende bearbeiten, wenn die Funktionen stehen.
+
+BEREITS VORHANDEN UND PRAKTISCH GEPRÜFT
+- LAB-Desktop, symbolfreie Arbeitsfläche, gesperrte Leiste und vorgesehene
+  Starter, U-Zeiten-Autostart, KDE-Sitzungsvorgaben und Firefox-Richtlinien.
+- Labornetz-Dialog mit Schutz des Schulanschlusses, manuelle IPv4/IPv6,
+  Routenprüfung, Konsole über PuTTY/Minicom und USB-Labormitschnitt.
+- Lokales Sammelkonto cisco einschließlich zentraler Anmeldung und LAB-Rechten.
+- Bilder auswählen, auf Pilot testen, abnehmen und auf den Raum verteilen.
+- Sammelaktionen einschließlich Magic-Packet-WOL sind implementiert und
+  bereits benutzt. Die automatische tägliche Orchestrierung ist separat offen.
+- Verschlüsseltes Teacher-Backup auf data/backup_data und SCP-Übertragung
+  zum macOS-Server. Erfolgreiche lokale und SCP-Läufe vom 06.11. sind gespeichert.
+- Webzugang mit HTTPS und Anmeldung; VPN-Pool 172.17.17.0/24 freigegeben,
+  interner DNS-Weg über Caddy und erfolgreicher Browserzugriff bestätigt.
+- Basisinstallation und SSH-Bootstrap wurden auf frischen Clients benutzt.
+  Nach dem früheren GUI-Zeitlimit wurde LAB-08A erfolgreich fertiggestellt.
+- Neuer Abendablauf auf LAB-08A praktisch bestanden. Reguläres Abmelden,
+  Aushängen des verbliebenen RAM-Homes, zwei Updates und Neustart.
+
+AKTUELLE RAUMPRÜFUNG AM 07.11.2026
+Alle 16 Clients waren bei der lesenden Bestandsprüfung erreichbar.
+- LAB-08A verwendet tmpfs (non persistent), den neuen Abendmodus und einen
+  aktiven Timer Mo–Fr um 18 Uhr. Der nächste reguläre Lauf ist am 09.11.
+- Die übrigen 15 Clients verwenden weiterhin tmpfs + archive.
+- LAB-08B hat den bisherigen Wartungspiloten mit älterer Belegungsregel.
+- LAB-01A bis LAB-07B haben noch keinen cisco-lab-maintenance.timer.
+- Der neue Labornetz-Dienst ist auf allen 16 Clients aktiv.
+- Alle 16 Clients haben jetzt das geprüfte Winbind-Modul. Die Lücke nach
+  Neuinstallation von LAB-08A wurde geschlossen. Der Fix ist verpflichtend
+  in fresh-client.yml und damit in CLI- und GUI-Baseline enthalten.
+Beleg auf Teacher unter LAB-Bestandsaufnahme-2026-11-03/
+projektstatus-clients-20261107.json.
+
+ARBEITSBLOCK 1 – NEUINSTALLATION VOLLSTÄNDIG MACHEN
+- ERLEDIGT: Winbind-Versionsprüfung, Sicherung, atomare Installation,
+  Funktionsprüfung und Rückweg in die Baseline integriert. LAB-08A
+  korrigiert und Wiederholung ohne Änderung bestanden. Unpassende
+  Samba-Versionen stoppen den Lauf; kein unbekanntes Modul überschreiben.
+- ERLEDIGT: Lokale Administratoren überspringen ausschließlich pam_mount;
+  dadurch entstehen keine falschen IServ-RAM-Homes beim Verwaltungs-SSH.
+- ERLEDIGT: lab-baseline.yml verwendet ausschließlich die aktuelle Folge
+  fresh-client.yml, local-cisco.yml und maintenance-client.yml. Vollständiger
+  Lauf auf LAB-08A am 07.11. bestanden: 206 Aufgaben erfolgreich, kein Fehler.
+  Veyon, WOL, Sammelkonto und Abendwartung enthalten. GUI verwendet dieselben
+  Komponenten mit Wiederaufnahme an den drei Phasengrenzen.
+- Den neuen kompletten GUI-Weg für Erstaufnahme, zwei parallele Ziele
+  und Wiederanlauf praktisch abnehmen. Diese neuen Wege sind bisher
+  lokal simuliert und technisch geprüft; ein vollständiger frischer
+  GUI-Durchlauf nach den Änderungen steht aus.
+- Hardwaredatei wird derzeit noch lokal vorbereitet. Die tatsächliche
+  Adapterzuordnung muss auch bei den USB-Ausnahmen geprüft bleiben.
+- Bekannte Altlasten anhand einer gemeinsamen Liste prüfen und gezielt
+  ablösen. Die alte lab-baseline.yml darf nicht wieder widersprechende
+  Rollen, Timer oder Autostarts aktivieren.
+
+ARBEITSBLOCK 2 – ZIELSTAND IM RAUM EINFÜHREN
+- Die weiteren Clients werden auf Nutzerwunsch schrittweise über IServ
+  mit tmpfs (non persistent) neu installiert und danach über die Baseline
+  aufgenommen. Der Betreiber startet die Imageinstallation.
+- Nach dem Pilot den neuen Abendablauf für die übrigen Clients einführen
+  und ihre konkurrierenden APT-Automatiken abstimmen.
+- Danach Raumstand einschließlich Netzwerk, Desktop, Dienste und
+  Winbind-Versionen gegen die gemeinsame Sollbasis prüfen.
+- Der normale Logout hängt das RAM-Home derzeit nicht zuverlässig aus.
+  Die Abendwartung räumt es nach Sitzungsende auf; ein frisches Profil
+  nach jedem einzelnen Login ist gegenwärtig nicht zugesichert.
+- Packet Tracer einmal nach einem wirklich frischen nichtpersistenten
+  Home auf wiederkehrende Lizenz-/Anmeldedialoge prüfen. Version 9.0 ist
+  auf Nutzerwunsch zunächst ausreichend.
+
+ARBEITSBLOCK 3 – UNBEAUFSICHTIGTE WARTUNG FERTIGSTELLEN
+- Teacher-Aufwachen aus Standby und Einschalten nach vollständigem
+  Ausschalten praktisch prüfen und einen verlässlichen Weg festlegen.
+- ERLEDIGT AUF LAB-08A: Zentrale Steuerung mit Registrierung, festem
+  SSH-Schlüssel, WOL, Erreichbarkeit, Wartungsdienst, Boot-ID-Nachweis und
+  GUI-Ergebnisprotokoll. Echter Durchlauf am 07.11. 14:13–14:15 bestanden.
+  Nur LAB-08A registriert. Timer auf Teacher Mo–Fr 18–20 Uhr aktiv, bei
+  belegter GUI-Sperre erneuter Versuch alle zehn Minuten. Fertige Clients
+  werden am selben Tag nicht erneut geweckt.
+  Ohne laufenden Teacher und Benutzerdienst ist die Steuerung nicht verfügbar;
+  Linger-Aktivierung und Teacher-Aufwachen bleiben separat offen.
+- ERLEDIGT: Eigenständig geweckte Clients werden anhand anfänglicher
+  Erreichbarkeit und Boot-Uptime nachgewiesen. Nach erfolgreichem Neustart
+  nur weiterhin freie, eigens geweckte Clients herunterfahren. LAB-08A
+  hat auch das abschließende Herunterfahren praktisch bestanden.
+- Teacher-Updates nach den Clients und sein abschließendes Ausschalten
+  gemäß Herkunft des Wartungsstarts integrieren.
+- Ersten regulären zeitgesteuerten Pilotlauf anhand des Journals abnehmen.
+
+ARBEITSBLOCK 4 – WIEDERHERSTELLUNG ABSICHERN
+- ERLEDIGT: Neue verschlüsselte Sicherung vom 07.11. auf data/backup_data
+  und macOS per SCP erstellt. Isolierte Wiederherstellung von 356 Dateien
+  einschließlich SSH-Schlüsselvergleich und Dashboard-Start mit
+  wiederhergestelltem Zustand bestanden (HTTP 200). Alte Sicherungen vom
+  06.11. enthielten noch nicht den vollständigen Dashboard-Zustand.
+  Rootgeschützte Systemdateien sind noch separat offen; kein vollständiger
+  Ersatzrechner wurde aufgebaut.
+- Externe Verwahrung des Wiederherstellungsschlüssels bestätigen.
+- Fehlende rootgeschützte Teacher-Dateien einschließlich Backend-TLS-Key
+  administrativ sichern oder einen geprüften Wiederherstellungsweg vorsehen.
+- ERLEDIGT: Rotation 90 Tage plus letzte bestätigte funktionierende
+  Sicherung implementiert und getestet. Ohne Bestätigung bleibt die neueste
+  erfolgreiche Sicherung erhalten. Fremde oder veränderte Dateien werden
+  nicht gelöscht. Bei fehlgeschlagener externer Löschung bleibt lokal erhalten.
+
+ZURÜCKGESTELLTE FUNKTIONEN
+- Profil-Löschfunktion entfällt auf ausdrücklichen Nutzerwunsch. Die
+  Clients werden schrittweise mit tmpfs ohne Archiv neu installiert.
+  Die verbliebene Profilvorschau wird bei der GUI-Bereinigung entfernt.
+- Automatische Suche/Beschaffung und Pilotierung neuer Packet-Tracer-
+  Versionen sind noch kein fertiger Wartungsbestandteil. Zunächst Version 9.0.
+- Weitere Programm- und GUI-Funktionswünsche erst nach den obigen Blöcken
+  ergänzen, damit die Abschlussliste überschaubar bleibt.
+
+ARBEITSBLOCK 5 – DOKUMENTATION UND VERÖFFENTLICHUNG NACHZIEHEN
+- GitHub und GitHub Pages existieren bereits, Deutsch und Englisch sowie
+  GUI-/Clientbilder sind angelegt. Die Änderungen vom 07.11. sind noch
+  nicht als neuer öffentlicher Export veröffentlicht.
+- Bei Veröffentlichung Quellen, Anleitungen und Screenshots gemeinsam
+  aktualisieren. Schlüssel, Passwörter und Betriebsdaten lokal halten.
+- Aktuellen Projektstatus führen; frühere Testprotokolle als Historie
+  kennzeichnen, statt alte offene Punkte erneut als Aufgaben auszugeben.
+
+ARBEITSBLOCK 6 – GUI AM ENDE VEREINFACHEN
+- Gemeinsam den alltäglichen Bedienablauf festlegen.
+- Häufige Aktionen hervorheben, technische Details und alte Laufhistorie
+  erst bei Bedarf zeigen. Doppelte Hinweise und veraltete Praxistest-
+  Aufforderungen entfernen.
+- Menüs, Seitenaufteilung, Begriffe und Rückmeldungen konsistent gestalten.
+- Abschließenden vollständigen Bedienungstest mit dem Lehrer durchführen.
+
+NÄCHSTER KONKRETER ARBEITSBLOCK
+Block 3: Teacher-Aufwachen und seine anschließende eigene Wartung
+vorbereiten. Der echte WOL-/Wartungs-/Neustart-/Ausschalttest auf LAB-08A
+ist bestanden. Nur LAB-08A ist für den neuen Controller
+registriert; kein Raumrollout und keine IServ-Serveränderung.
+Parallel Block 4: Einmalige Teacher-Adminvorbereitung und Bestätigung der
+externen Schlüsselverwahrung sind beim Nutzer angefragt.
+Lokaler Teststand: 119 Tests, davon 6 umgebungsabhängig übersprungen.

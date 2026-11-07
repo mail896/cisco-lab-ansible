@@ -26,6 +26,14 @@ class MaintenancePreviewTests(unittest.TestCase):
         self.assertFalse(result['autoremove_allowed'])
         self.assertFalse(result['shutdown_eligible'])
 
+    def test_explicit_evening_policy_plans_logout_but_preserves_package_guard(self):
+        sample = self.probe(occupied=True)
+        sample['evening_restart'] = True
+        self.assertEqual(plan_host(sample)['action'], 'evening_logout_install')
+        self.assertFalse(plan_host(sample)['shutdown_eligible'])
+        sample['upgrade'] = parse_apt('Inst winbind [1] (2)')
+        self.assertEqual(plan_host(sample)['action'], 'review')
+
     def test_any_critical_removal_blocks_entire_autoremove(self):
         result = plan_host(self.probe(cleanup='Remv old-app [1]\nRemv veyon-service [1]'))
         self.assertEqual(result['blocked_removals'], ['veyon-service'])

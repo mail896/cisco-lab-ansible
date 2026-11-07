@@ -1,0 +1,140 @@
+---
+- name: Abendwartung auf einem ausdrücklich gewählten LAB-Client einrichten
+  hosts: cisco_lab
+  gather_facts: false
+  become: true
+  vars:
+    ansible_ssh_use_tty: false
+    ansible_pipelining: true
+    lab_maintenance_enable_timer: true
+  tasks:
+  - name: Einen ausdrücklich benannten LAB-Client mit Inventaradresse verlangen
+    ansible.builtin.assert:
+      that:
+      - ansible_play_hosts_all == [lab_maintenance_host | default('')]
+      - inventory_hostname is match('^LAB-0[1-8][AB]$')
+      - ansible_host == ('10.255.40.' ~ (((inventory_hostname[4:6] | int) - 1) * 2 + (1 if inventory_hostname[-1]
+        == 'A' else 2)))
+  - name: Geräteidentität und unabhängige Paketläufe prüfen
+    ansible.builtin.shell: |
+      set -eu
+      test "$(hostname)" = {{ inventory_hostname | quote }}
+      for unit in apt-daily.service apt-daily-upgrade.service cisco-lab-maintenance.service; do
+        state=$(systemctl show "$unit" -p ActiveState --value)
+        case "$state" in inactive|failed|'') ;; *) exit 1 ;; esac
+      done
+    args:
+      executable: /bin/sh
+    changed_when: false
+  - name: Vorhandene Wartungs- und APT-Konfiguration sichern
+    ansible.builtin.command:
+      argv:
+      - /usr/bin/python3
+      - -IB
+      - -c
+      - |
+        import json, subprocess
+        from pathlib import Path
+        source = {{ lookup('ansible.builtin.file', playbook_dir + '/roles/lab_desktop/files/snapshot.py') | to_json }}
+        scope = {'__name__': 'maintenance_snapshot'}
+        exec(source, scope)
+        backup = Path(scope['snapshot']([
+            '/etc/systemd/system/cisco-lab-maintenance.service',
+            '/etc/systemd/system/cisco-lab-maintenance.timer',
+            '/etc/apt/apt.conf.d/zz-cisco-lab-maintenance',
+            '/usr/local/lib/cisco-lab-maintenance/maintenance/pilot.py',
+            '/usr/local/lib/cisco-lab-maintenance/maintenance/preview.py',
+            '/usr/local/lib/cisco-lab-maintenance/dashboard/room_action.py',
+            '/etc/systemd/system/timers.target.wants/apt-daily.timer',
+            '/etc/systemd/system/timers.target.wants/apt-daily-upgrade.timer',
+            '/etc/systemd/system/timers.target.wants/cisco-lab-maintenance.timer'
+        ], '/var/backups/cisco-lab/maintenance'))
+        (backup / 'restore.py').write_text(source + '\n')
+        states = {unit: subprocess.run(['systemctl', 'is-enabled', unit], text=True,
+                   capture_output=True).stdout.strip() for unit in (
+                   'apt-daily.timer', 'apt-daily-upgrade.timer', 'cisco-lab-maintenance.timer')}
+        (backup / 'timer-states.json').write_text(json.dumps(states))
+        print(backup)
+    register: maintenance_backup
+  - name: Verzeichnisse für den geprüften Python-Quellstand anlegen
+    ansible.builtin.file:
+      path: /usr/local/lib/cisco-lab-maintenance/{{ item }}
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+    loop:
+    - maintenance
+    - dashboard
+  - name: Wartung und gemeinsamen KDE-Abmeldecode installieren
+    ansible.builtin.copy:
+      src: '{{ item }}'
+      dest: /usr/local/lib/cisco-lab-maintenance/{{ item }}
+      owner: root
+      group: root
+      mode: '0644'
+    loop:
+    - maintenance/pilot.py
+    - maintenance/preview.py
+    - dashboard/room_action.py
+  - name: Pilotdienst und Timer installieren
+    ansible.builtin.copy:
+      dest: /etc/systemd/system/{{ item.dest }}
+      owner: root
+      group: root
+      mode: '0644'
+      content: |
+        {{ lookup('ansible.builtin.file', playbook_dir + '/maintenance/systemd/' + item.src) | replace('LAB-08A', inventory_hostname) | replace('LAB-08B', inventory_hostname) }}
+    loop:
+    - src: cisco-lab-maintenance-evening.service
+      dest: cisco-lab-maintenance.service
+    - src: cisco-lab-maintenance.timer
+      dest: cisco-lab-maintenance.timer
+  - name: Automatische APT-Läufe in der Wartung bündeln
+    ansible.builtin.copy:
+      dest: /etc/apt/apt.conf.d/zz-cisco-lab-maintenance
+      owner: root
+      group: root
+      mode: '0644'
+      content: |
+        APT::Periodic::Enable "0";
+        APT::Periodic::Update-Package-Lists "0";
+        APT::Periodic::Download-Upgradeable-Packages "0";
+        APT::Periodic::Unattended-Upgrade "0";
+  - name: Bisherige APT-Timer deaktivieren
+    ansible.builtin.systemd_service:
+      name: '{{ item }}'
+      enabled: false
+      state: stopped
+      daemon_reload: true
+    loop:
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
+  - name: Zeitplan erst nach erfolgreichem Pilot einschalten
+    ansible.builtin.systemd_service:
+      name: cisco-lab-maintenance.timer
+      enabled: '{{ lab_maintenance_enable_timer | bool }}'
+      state: '{{ ''started'' if lab_maintenance_enable_timer | bool else ''stopped'' }}'
+      daemon_reload: true
+  - name: Rückweg und Pilotumfang ausweisen
+    ansible.builtin.debug:
+      msg: Sicherung unter {{ maintenance_backup.stdout }}. Dienst nur installiert; Teststart separat.
+
+  - name: Fertig eingerichteten Client für zentrale Wartung registrieren
+    ansible.builtin.command:
+      argv:
+        - /usr/bin/python3
+        - -B
+        - -m
+        - maintenance.controller
+        - --register
+        - "{{ inventory_hostname }}"
+        - --known-hosts
+        - "{{ lab_maintenance_known_hosts | default(lab_fresh_known_hosts | default(lookup('ansible.builtin.env', 'HOME') + '/.ssh/known_hosts')) }}"
+        - --school-mac
+        - "{{ lab_network_manifest.identity.school.mac }}"
+    delegate_to: localhost
+    become: false
+    args:
+      chdir: "{{ playbook_dir }}"
+    when: lab_network_manifest is defined

@@ -2,12 +2,15 @@
 
 [Deutsch](wartung-vorschau.md) · **English**
 
-Run the read-only preview from LAB-Teacher:
+The read-only preview checks package state, sessions, proposed removals,
+bootable kernels and the version-bound Winbind fix. The new evening policy
+requests normal logout, verifies completion, installs updates and always reboots
+after success. Start window: Monday–Friday, 18:00–20:00 Europe/Berlin. Transactions
+already in progress may finish. Failed workstations remain powered on.
 
-```bash
-python3 -B -m maintenance.preview --lab08b-known-hosts "$lab08b_known_hosts"
-```
+The new policy and real central WOL/reboot/shutdown trial passed on LAB-08A.
+LAB-08B retains the earlier comparison mode, downloading only while occupied.
+Further clients follow their reinstallation. Teacher-PC availability and its own
+update sequence remain separate unfinished work.
 
-The maintenance window is Monday through Friday, 18:00 to 20:00 Europe/Berlin. Work already in progress can finish. The preview checks package state, active sessions, proposed removals and bootable kernels. A scheduled pilot runs within the configured maintenance window. If a user is signed in or an IServ home is still mounted, it downloads packages and defers installation. On an idle machine, it checks the transaction, protects classroom packages and the version-bound Winbind workaround, and restarts only when required.
-
-Review preview output and package versions on the pilot before wider use. The maintenance runner deliberately keeps session, package-manager and reboot checks in place.
+[Operation and technical status](dashboard.en.md#evening-maintenance)

@@ -48,19 +48,42 @@
     </section>
     <section id="deployment" class="panel" data-page="/installationsfolge" hidden>
       <div class="section-heading"><div><p class="eyebrow">Ansible</p><h2>Installationsfolge prüfen</h2></div><span class="badge neutral">Vorschau</span></div>
-      <p class="muted">Zeigt die Aufgaben der Baseline für genau einen ausgewählten Client.</p>
+      <p class="muted">Zeigt die Aufgaben der Baseline für einen Client, einschließlich optionaler Schritte.</p>
       <form id="plan-form"><label for="host">Zielclient</label><select id="host" required></select><button id="plan-button" class="button" type="submit">Aufgaben anzeigen</button></form>
       <p id="plan-status" role="status"></p>
       <ol id="tasks" hidden></ol>
+      <h3>SSH-Erstaufnahme</h3>
+      <p class="muted">Benötigt eine geprüfte Hardwaredatei auf LAB-Teacher und den ED25519-Fingerabdruck von der Konsole des Zielrechners. Passwortfelder werden nach dem Start geleert.</p>
+      <p><code>ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub</code></p>
+      <form id="bootstrap-form">
+        <label for="bootstrap-host">Client</label><select id="bootstrap-host" required></select>
+        <span id="bootstrap-adapters" class="muted"></span>
+        <label for="bootstrap-fingerprint">Bestätigter SSH-Fingerabdruck</label>
+        <input id="bootstrap-fingerprint" type="text" placeholder="SHA256:…" maxlength="50" spellcheck="false" required>
+        <label for="bootstrap-ssh">Lokales SSH-Passwort</label>
+        <input id="bootstrap-ssh" type="password" maxlength="256" autocomplete="off" required>
+        <label for="bootstrap-sudo">Lokales sudo-Passwort</label>
+        <input id="bootstrap-sudo" type="password" maxlength="256" autocomplete="off" required>
+        <button class="button" id="bootstrap-start" type="submit" disabled>SSH-Erstaufnahme starten</button>
+      </form>
+      <p id="bootstrap-status" role="status"></p>
       <h3>Basisinstallation starten</h3>
-      <p class="muted">Einzelclient nach lokaler SSH-Erstaufnahme und geprüfter Hardwaredatei. Der GUI-Lauf installiert die LAB-Basis ohne Veyon.</p>
+      <p class="muted">Bereits aufgenommene Clients auswählen. Höchstens zwei werden gleichzeitig installiert. Veyon kann pro Client mit eingerichtet werden.</p>
       <form id="fresh-form">
-        <label for="fresh-host">Vorbereiteter Client</label><select id="fresh-host" required></select>
+        <fieldset><legend>Vorbereitete Clients</legend><div id="fresh-targets"></div></fieldset>
         <button class="button primary" id="fresh-start" type="submit" disabled>Basis installieren</button>
       </form>
       <p id="fresh-status" role="status"></p>
       <ul id="fresh-runs"></ul>
       <pre id="fresh-output" class="console-output" hidden></pre>
+      <h3>Lokale IServ-Profilreste prüfen</h3>
+      <p class="muted">Die Vorschau liest lokale Verzeichnismetadaten. Das Ordnerdatum belegt keine letzte Nutzung. Eine Löschaktion gibt es hier nicht.</p>
+      <form id="profiles-form">
+        <label for="profiles-host">Client</label><select id="profiles-host" required></select>
+        <button class="button" id="profiles-preview" type="submit">Profilvorschau laden</button>
+      </form>
+      <p id="profiles-status" role="status"></p>
+      <ul id="profiles-result"></ul>
     </section>
     <section id="pilots" class="panel" data-page="/pilotdeploys" hidden>
       <div class="section-heading"><div><p class="eyebrow">Testclients</p><h2>Pilotdeploy starten</h2></div><span class="badge neutral">Nur LAB-08A und LAB-08B</span></div>
@@ -178,12 +201,18 @@
       <pre id="catalog-output" class="console-output" hidden></pre>
     </section>
     <section id="maintenance" class="panel" data-page="/wartung" hidden>
-      <div class="section-heading"><div><p class="eyebrow">APT</p><h2>Wartung auf LAB-08B</h2></div></div>
-      <p class="muted">Pilotlauf. Der bestehende Wartungsdienst entscheidet auf dem Client, ob er nur lädt oder installiert. Der manuelle Start ist werktags von 18–20 Uhr freigegeben.</p>
+      <div class="section-heading"><div><p class="eyebrow">APT</p><h2>Wartungspiloten</h2></div></div>
+      <p class="muted">Wähle den Pilotclient und prüfe dessen Wartungsregel. Der manuelle Start ist werktags von 18–20 Uhr freigegeben.</p>
+      <label for="maintenance-host">Wartungspilot</label>
+      <select id="maintenance-host"><option>LAB-08A</option><option>LAB-08B</option></select>
+      <p id="maintenance-policy" class="muted"></p>
       <button type="button" class="button" id="maintenance-refresh">Status aktualisieren</button>
-      <button type="button" class="button primary" id="maintenance-start" disabled>Wartung auf LAB-08B starten</button>
+      <button type="button" class="button primary" id="maintenance-start" disabled>Wartung starten</button>
       <p id="maintenance-status" role="status"></p>
       <pre id="maintenance-output" class="console-output"></pre>
+      <h3>Zentrale Abendwartung</h3>
+      <p id="maintenance-enrolled" class="muted"></p>
+      <div id="maintenance-runs"></div>
     </section>
     <dialog id="catalog-confirm" aria-labelledby="catalog-confirm-title">
       <h3 id="catalog-confirm-title">Verwaltungsauftrag bestätigen</h3>

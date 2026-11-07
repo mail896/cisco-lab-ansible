@@ -1,0 +1,6 @@
+{
+  "vendor_version": "2:4.22.11+dfsg-0+deb13u1",
+  "vendor_module_sha256": "f7924c46f0ded38e5965fdc9f95a08e278fceedf02e3b29239b6400560b54943",
+  "candidate_sha256": "61fe179121bcc6d3442d1ded9b59e9b5239daae4adc905ac6e487735d81b89e9",
+  "patch_sha256": "1b297d89ccc4660da6f4cb3ebc281fb2ed53a3265ea261730b50d31a91b79875"
+}
