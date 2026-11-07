@@ -44,6 +44,13 @@ working backup.
 
 [Installation](docs/media/dashboard-installation.jpg) · [Maintenance results](docs/media/dashboard-maintenance.jpg) · [Backup](docs/media/dashboard-backup.jpg)
 
+### Teacher suspend route retired
+
+The real 7 November suspend/wake trial failed; WOL did not recover the teacher PC.
+A colleague had to hard-restart it on site. This route is retired and its test
+entry points are disabled. The operator confirms working WOL from full shutdown;
+an external scheduled sender is still needed. The exact failure cause is unknown.
+
 ## Repository guide
 
 | Path | Purpose |

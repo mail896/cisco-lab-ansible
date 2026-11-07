@@ -133,15 +133,18 @@ failed off-host pruning preserves the local copy. Public GitHub sources and
 documentation are separate from operational recovery backups.
 
 
-## Teacher wake preparation
+## Teacher power-on after the failed suspend trial
 
-Linger is enabled for the dashboard user service. The separate root setup
-`maintenance/setup-teacher-wake.sh` installs a system timer with `WakeSystem=true`
-for Monday–Friday 17:50 Europe/Berlin. Setup itself never suspends the computer.
-The separate two-minute `maintenance/teacher_wake_test.py --suspend-test` requires an agreed
-test window and a recovery route if hardware wake fails. It serializes against
-GUI jobs, arms a wake-capable timer and then requests suspend. A running machine
-or early keyboard wake cannot pass. Results go to
-`/var/lib/cisco-lab-teacher-wake/last-test.json`. The physical suspend/wake test
-has not yet run. Power-on from full shutdown (S5) and Teacher self-updates remain
-separate unfinished work.
+The real 7 November suspend/wake trial failed. WOL did not recover the teacher PC;
+a colleague had to perform a hard restart on site. The kernel/firmware cause
+has not been established. The suspend route is retired; its test and installer
+reject new runs. Root execution of `maintenance/retire-teacher-suspend.sh`
+disables the old timer and masks sleep/hibernation targets without initiating a
+power action. That cleanup still awaits root execution.
+
+The operator confirms long-standing working WOL from full shutdown. This requires
+an external WOL sender; a local WakeSystem timer cannot power on an off computer.
+Caddy is on a different routed network and has not been proven as a WOL sender
+for the school NIC. No schedule or script is installed on IServ. Linger, the
+dashboard and the client maintenance controller are running after the restart.
+Teacher self-updates remain separate unfinished work.

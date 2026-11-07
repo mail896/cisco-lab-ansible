@@ -44,6 +44,14 @@ Root-Export mit 12 Systemdateien einschließlich TLS-/Veyon-Schlüsseln ist gepr
 
 [Installationsfolge](docs/media/dashboard-installation.jpg) · [Wartungsergebnisse](docs/media/dashboard-maintenance.jpg) · [Sicherung](docs/media/dashboard-backup.jpg)
 
+### Teacher-Standby verworfen
+
+Der reale Suspend-/Aufwachtest scheiterte am 07.11.; auch WOL holte den Teacher
+nicht zurück. Eine Kollegin musste ihn vor Ort hart neu starten. Dieser Weg
+wird nicht weiter verwendet, und die Teststarter sind gesperrt. Der Betreiber
+bestätigt funktionierendes WOL aus vollständigem Ausschalten; ein externer
+Startauslöser wird dafür noch benötigt. Die genaue Fehlerursache ist nicht belegt.
+
 ## Dateien im Repository
 
 | Pfad | Zweck |

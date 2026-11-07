@@ -80,8 +80,11 @@ ARBEITSBLOCK 2 – ZIELSTAND IM RAUM EINFÜHREN
   auf Nutzerwunsch zunächst ausreichend.
 
 ARBEITSBLOCK 3 – UNBEAUFSICHTIGTE WARTUNG FERTIGSTELLEN
-- Teacher-Aufwachen aus Standby und Einschalten nach vollständigem
-  Ausschalten praktisch prüfen und einen verlässlichen Weg festlegen.
+- STANDBY-WEG VERWORFEN: Echter Test am 07.11. fehlgeschlagen. RTC und
+  WOL holten Teacher nicht zurück; harter Neustart durch Kollegin vor Ort nötig.
+  Keine genaue Ursache belegt. Weitere Low-Power-Tests gesperrt.
+  WOL aus vollständig ausgeschaltetem Zustand ist laut Betreiber bewährt.
+  Externen WOL-Auslöser für diesen Startweg festlegen.
 - ERLEDIGT AUF LAB-08A: Zentrale Steuerung mit Registrierung, festem
   SSH-Schlüssel, WOL, Erreichbarkeit, Wartungsdienst, Boot-ID-Nachweis und
   GUI-Ergebnisprotokoll. Echter Durchlauf am 07.11. 14:13–14:15 bestanden.
@@ -90,9 +93,10 @@ ARBEITSBLOCK 3 – UNBEAUFSICHTIGTE WARTUNG FERTIGSTELLEN
   werden am selben Tag nicht erneut geweckt.
   Ohne laufenden Teacher und Benutzerdienst ist die Steuerung nicht verfügbar;
   Linger ist seit 07.11. vom Betreiber aktiviert und technisch geprüft.
-  Teacher-Aufwachen bleibt separat offen. Ein Systemtimer für Mo–Fr 17:50
-  und ein beaufsichtigter Zwei-Minuten-Test sind lokal vorbereitet und geprüft.
-  Der Test löst ohne Betreiberaktion keinen Standby aus.
+  Der zuvor aktivierte 17:50-Standby-Timer ist nach dem fehlgeschlagenen
+  Hardwaretest obsolet. Root-Bereinigung und dauerhafte Schlafsperre sind in
+  maintenance/retire-teacher-suspend.sh vorbereitet; Live-Ausführung noch offen.
+  Der Quellcode der Teststarter verweigert erneute Ausführung.
 - ERLEDIGT: Eigenständig geweckte Clients werden anhand anfänglicher
   Erreichbarkeit und Boot-Uptime nachgewiesen. Nach erfolgreichem Neustart
   nur weiterhin freie, eigens geweckte Clients herunterfahren. LAB-08A
@@ -134,7 +138,7 @@ ARBEITSBLOCK 5 – DOKUMENTATION UND VERÖFFENTLICHUNG NACHZIEHEN
 - ERLEDIGT: Öffentlicher Export vom 07.11. veröffentlicht, Commit
   99faed10976240456ecc10701ab1a5d310f26d17. Deutsche und englische
   Anleitungen und Pages aktualisiert, drei neue Live-GUI-Screenshots.
-  Quellenexport und lokale Tests stimmen überein (124 Tests, 6 übersprungen).
+  Quellenexport und lokale Tests stimmen überein (121 Tests, 6 übersprungen).
   Deutsche und englische Pages liefern HTTP 200 und den neuen Stand.
 - Bei Veröffentlichung Quellen, Anleitungen und Screenshots gemeinsam
   aktualisieren. Schlüssel, Passwörter und Betriebsdaten lokal halten.
@@ -155,6 +159,7 @@ vorbereiten. Der echte WOL-/Wartungs-/Neustart-/Ausschalttest auf LAB-08A
 ist bestanden. Nur LAB-08A ist für den neuen Controller
 registriert; kein Raumrollout und keine IServ-Serveränderung.
 Block 4 abgeschlossen für Konfigurationssicherung und isolierten Restore.
-Der nächste echte Hardwaretest auf Teacher benötigt einen verfügbaren
-Wiederanlaufweg des Betreibers; dazu ist eine einzelne Interviewfrage gestellt.
-Lokaler Teststand: 124 Tests, davon 6 umgebungsabhängig übersprungen.
+Keine weiteren Standby-Tests. Als Nächstes vorbereitete Root-Bereinigung
+aktivieren und externen WOL-Start aus vollständig ausgeschaltetem Zustand planen.
+Dashboard, nginx und Client-Controller sind nach dem erzwungenen Neustart aktiv.
+Lokaler Teststand: 121 Tests, davon 6 umgebungsabhängig übersprungen.

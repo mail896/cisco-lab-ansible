@@ -148,19 +148,20 @@ bekannte Archivpaare gelöscht. Bei externer Löschstörung bleibt lokal erhalte
 GitHub veröffentlicht Quellen und Dokumentation und ersetzt diese Sicherung nicht.
 
 
-## Aufwachen des Lehrer-PCs
+## Einschalten des Lehrer-PCs nach fehlgeschlagenem Standby-Test
 
-Linger ist aktiviert; der Dashboard-Benutzerdienst kann ohne KDE-Anmeldung
-starten. `maintenance/setup-teacher-wake.sh` bereitet als separat auszuführender
-Root-Schritt den Systemtimer Mo–Fr 17:50 Europe/Berlin mit `WakeSystem=true` vor.
-Das Installationsskript selbst versetzt den PC nicht in Standby. Ein
-Benutzer-Timer hat diese Aufwachrechte nicht.
+Der praktische Standby-Aufwachtest am 07.11.2026 schlug fehl. Auch WOL holte
+den Teacher nicht zurück; eine Kollegin musste ihn vor Ort hart neu starten.
+Die konkrete Kernel-/Firmwareursache ist nicht belegt. Der zuvor vorbereitete
+Standby-Weg wird nicht weiter verwendet; Test und Installer verweigern neue Läufe.
+`maintenance/retire-teacher-suspend.sh` deaktiviert nach Root-Ausführung den alten
+Timer und maskiert Schlaf-/Ruhezustandsziele. Es löst selbst keinen Neustart aus.
+Die Root-Ausführung dieser Bereinigung steht noch aus.
 
-Der getrennte `maintenance/teacher_wake_test.py --suspend-test` benötigt eine ausdrückliche
-Terminabsprache und einen Wiederanlaufweg, falls die Hardware nicht aufwacht.
-Er blockiert konkurrierende GUI-Aufträge, legt einen weckfähigen Testtimer an
-und fordert erst danach Standby an. Ein laufender Rechner oder frühes Aufwecken
-per Tastatur gelten nicht als erfolgreicher Test. Das Ergebnis wird unter
-`/var/lib/cisco-lab-teacher-wake/last-test.json` gespeichert. Noch kein echter
-Standby-Test durchgeführt; Einschalten aus vollständigem Ausschalten (S5) bleibt
-zusätzlich offen. Teacher-eigene Updates sind noch nicht aktiviert.
+Der Betreiber bestätigt seit Langem funktionierendes WOL aus vollständig
+ ausgeschaltetem Zustand. Dieser Startweg benötigt einen externen WOL-Auslöser;
+ein lokaler WakeSystem-Timer kann den ausgeschalteten Rechner nicht einschalten.
+Caddy liegt in einem anderen gerouteten Netz und ist noch kein nachgewiesener
+WOL-Sender für den Schulanschluss. Auf IServ werden keine Zeitpläne oder Skripte
+angelegt. Linger, Dashboard und Client-Wartungssteuerung laufen nach dem Neustart.
+Teacher-eigene Updates bleiben ein separater offener Arbeitsblock.
