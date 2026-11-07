@@ -294,8 +294,7 @@ class Handler(BaseHTTPRequestHandler):
                     method = self.server.provision.retry if self.path.endswith('/retry') else self.server.provision.stop
                     run = method(**payload)
                     return self._json(202 if run else 409, run or {'error':'Ein Verwaltungsauftrag läuft.'})
-            if self.path == '/api/profiles/preview' and set(payload) == {'host'} and isinstance(payload['host'], str):
-                return self._json(200, self.server.provision.profile_preview(payload['host']))
+
             if self.path == '/api/maintenance/start' and set(payload) in ({'confirmed'}, {'host', 'confirmed'}):
                 if 'host' in payload and not isinstance(payload['host'], str):
                     raise ValueError('Ungültiger Wartungsclient.')

@@ -128,7 +128,7 @@ Archiv und SHA-256-Datei per SCP auf das festgelegte macOS-Ziel übertragen.
 Die SCP-Passwortdatei und der Wiederherstellungsschlüssel sind ausgeschlossen.
 Der Schlüssel muss getrennt außerhalb von LAB-Teacher verwahrt werden.
 
-Die Sicherung vom 07.11. wurde isoliert entschlüsselt: 356 Dateien, passender
+Die Sicherung vom 07.11. wurde isoliert entschlüsselt: 383 Dateien, passender
 SSH-Schlüssel und Start des wiederhergestellten Dashboards mit HTTP 200.
 Das ist ein Konfigurations-Restore, noch kein vollständiger Ersatzrechner.
 Ältere Sicherungen vom 06.11. enthalten nicht den vollständigen Dashboard-Zustand.

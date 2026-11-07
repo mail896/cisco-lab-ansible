@@ -254,7 +254,6 @@ async function loadFresh() {
     freshBusy = data.busy || data.runs.some(run => ['queued', 'running'].includes(run.status));
     freshHardware = data.hardware;
     setHostOptions(el('bootstrap-host'), freshHardware.map(item => item.host));
-    setHostOptions(el('profiles-host'), data.profile_hosts);
     renderFreshTargets(data);
     updateFreshButtons();
     el('bootstrap-status').textContent = freshHardware.length ? ''
@@ -304,30 +303,6 @@ el('bootstrap-form').addEventListener('submit', event => {
     el('bootstrap-sudo').value = '';
     await freshAction('/api/fresh/bootstrap', {host, fingerprint, ssh_password, sudo_password}, 'bootstrap-status');
   });
-});
-
-el('profiles-form').addEventListener('submit', async event => {
-  event.preventDefault();
-  const host = el('profiles-host').value;
-  const button = el('profiles-preview');
-  button.disabled = true;
-  el('profiles-result').replaceChildren();
-  el('profiles-status').textContent = 'Lese lokale Profilmetadaten auf ' + host + ' …';
-  try {
-    const data = await request('/api/profiles/preview', {host});
-    el('profiles-status').textContent = host + ' · ' + data.status + ' · ' + data.profiles.length + ' Verzeichnisse';
-    el('profiles-result').replaceChildren(...data.profiles.map(profile => {
-      const row = document.createElement('li');
-      row.textContent = [profile.directory,
-        profile.directory_mtime_days === null ? '' : 'Ordnerdatum vor ' + profile.directory_mtime_days + ' Tagen',
-        profile.protected_because].filter(Boolean).join(' · ');
-      return row;
-    }));
-  } catch (error) {
-    el('profiles-status').textContent = error.message;
-  } finally {
-    button.disabled = false;
-  }
 });
 
 async function loadMaintenance() {

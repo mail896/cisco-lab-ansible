@@ -115,7 +115,7 @@ run history. Encrypted archives reside on `data/backup_data`; optional SCP sends
 the archive and SHA-256 file to the configured macOS host. The SCP password file
 and recovery key are excluded. Store the recovery key separately off the teacher PC.
 
-The 7 November archive was restored in isolation: 356 files, matching SSH key
+The 7 November archive was restored in isolation: 383 files, matching SSH key
 and a restored dashboard returning HTTP 200. This tests configuration recovery,
 not a complete replacement computer. Older 6 November backups do not include
 complete dashboard state.

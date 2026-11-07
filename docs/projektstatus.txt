@@ -100,7 +100,7 @@ ARBEITSBLOCK 3 – UNBEAUFSICHTIGTE WARTUNG FERTIGSTELLEN
 
 ARBEITSBLOCK 4 – WIEDERHERSTELLUNG ABSICHERN
 - ERLEDIGT: Neue verschlüsselte Sicherung vom 07.11. auf data/backup_data
-  und macOS per SCP erstellt. Isolierte Wiederherstellung von 356 Dateien
+  und macOS per SCP erstellt. Isolierte Wiederherstellung von 383 Dateien
   einschließlich SSH-Schlüsselvergleich und Dashboard-Start mit
   wiederhergestelltem Zustand bestanden (HTTP 200). Alte Sicherungen vom
   06.11. enthielten noch nicht den vollständigen Dashboard-Zustand.
@@ -117,16 +117,18 @@ ARBEITSBLOCK 4 – WIEDERHERSTELLUNG ABSICHERN
 ZURÜCKGESTELLTE FUNKTIONEN
 - Profil-Löschfunktion entfällt auf ausdrücklichen Nutzerwunsch. Die
   Clients werden schrittweise mit tmpfs ohne Archiv neu installiert.
-  Die verbliebene Profilvorschau wird bei der GUI-Bereinigung entfernt.
+  Auch die verbliebene Profilvorschau und ihr API-Zugang sind aus der GUI entfernt.
 - Automatische Suche/Beschaffung und Pilotierung neuer Packet-Tracer-
   Versionen sind noch kein fertiger Wartungsbestandteil. Zunächst Version 9.0.
 - Weitere Programm- und GUI-Funktionswünsche erst nach den obigen Blöcken
   ergänzen, damit die Abschlussliste überschaubar bleibt.
 
 ARBEITSBLOCK 5 – DOKUMENTATION UND VERÖFFENTLICHUNG NACHZIEHEN
-- GitHub und GitHub Pages existieren bereits, Deutsch und Englisch sowie
-  GUI-/Clientbilder sind angelegt. Die Änderungen vom 07.11. sind noch
-  nicht als neuer öffentlicher Export veröffentlicht.
+- ERLEDIGT: Öffentlicher Export vom 07.11. veröffentlicht, Commit
+  99faed10976240456ecc10701ab1a5d310f26d17. Deutsche und englische
+  Anleitungen und Pages aktualisiert, drei neue Live-GUI-Screenshots.
+  Quellenexport und lokale Tests stimmen überein (119 Tests, 6 übersprungen).
+  Deutsche und englische Pages liefern HTTP 200 und den neuen Stand.
 - Bei Veröffentlichung Quellen, Anleitungen und Screenshots gemeinsam
   aktualisieren. Schlüssel, Passwörter und Betriebsdaten lokal halten.
 - Aktuellen Projektstatus führen; frühere Testprotokolle als Historie

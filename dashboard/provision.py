@@ -130,7 +130,7 @@ class Provision:
                     pass
             recent = [run for run in records if run['status'] not in ACTIVE][:30]
             return dict(hosts=ready, hardware=self.bootstrap.targets(), runs=active + recent,
-                        profile_hosts=list(LAB_TARGETS), veyon=veyon_available(),
+                        veyon=veyon_available(),
                         busy=self.deployments.lock.locked())
 
     @staticmethod
@@ -343,17 +343,6 @@ class Provision:
         with path.open('rb') as file:
             file.seek(max(0, path.stat().st_size-65536))
             return file.read().decode(errors='replace')
-
-    def profile_preview(self, host):
-        if host not in LAB_TARGETS:
-            raise ValueError('Bitte einen LAB-Client wählen.')
-        script = (ROOT/'tasks/home-cleanup-preview.py').read_text()
-        command = ssh_command(host, self.deployments.known_hosts_b,
-                              ['sudo', '-n', '/usr/bin/python3', '-IB', '-c', script, host])
-        result = subprocess.run(command, text=True, capture_output=True, timeout=25)
-        if result.returncode:
-            raise ValueError('Lesende Vorschau fehlgeschlagen. SSH-Zugang und sudo prüfen.')
-        return json.loads(result.stdout)
 
     @staticmethod
     def maintenance_hosts():
