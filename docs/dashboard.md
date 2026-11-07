@@ -126,17 +126,19 @@ Bildbibliothek, Benutzerdienste und Dashboard-Zustand einschließlich Zugang und
 Laufhistorie. Sie liegen verschlüsselt auf `data/backup_data`; optional werden
 Archiv und SHA-256-Datei per SCP auf das festgelegte macOS-Ziel übertragen.
 Die SCP-Passwortdatei und der Wiederherstellungsschlüssel sind ausgeschlossen.
-Der Schlüssel muss getrennt außerhalb von LAB-Teacher verwahrt werden.
+Der Schlüssel ist nach Bestätigung des Betreibers getrennt außerhalb von
+LAB-Teacher sicher verwahrt.
 
-Die Sicherung vom 07.11. wurde isoliert entschlüsselt: 383 Dateien, passender
-SSH-Schlüssel und Start des wiederhergestellten Dashboards mit HTTP 200.
+Die Sicherung vom 07.11. 15:59 enthält auch den Root-Systemexport. Isoliert
+wiederhergestellt wurden 386 Dateien und 12 eingebettete Systemdateien. Der
+SSH-Schlüssel passt, TLS- und Veyon-Schlüssel stimmen samt Eigentümer und Modus
+mit dem Live-Export überein; das wiederhergestellte Dashboard liefert HTTP 200.
 Das ist ein Konfigurations-Restore, noch kein vollständiger Ersatzrechner.
 Ältere Sicherungen vom 06.11. enthalten nicht den vollständigen Dashboard-Zustand.
 
 Rootgeschützte TLS-/Veyon-Dateien benötigen den festen Exporter
 `maintenance/teacher-backup-system.py` mit einer begrenzten sudo-Regel ohne
-Argumente. Die Teacher-Einrichtung ist vorbereitet; der Administrator muss sie
-noch ausführen. Der Sicherungseintrag zeigt, ob dieser Systemexport enthalten
+Argumente. Die Teacher-Einrichtung wurde vom Administrator ausgeführt und geprüft. Der Sicherungseintrag zeigt, ob dieser Systemexport enthalten
 ist. Der Dashboard-Benutzerdienst muss den vorgesehenen sudo-Aufruf zulassen.
 
 Die Rotation behält 90 Tage und zusätzlich die zuletzt als funktionierend
@@ -144,3 +146,21 @@ bestätigte Sicherung. Ohne Bestätigung bleibt die neueste erfolgreiche erhalte
 Die Bestätigung setzt eine passende Prüfsumme voraus. Es werden ausschließlich
 bekannte Archivpaare gelöscht. Bei externer Löschstörung bleibt lokal erhalten.
 GitHub veröffentlicht Quellen und Dokumentation und ersetzt diese Sicherung nicht.
+
+
+## Aufwachen des Lehrer-PCs
+
+Linger ist aktiviert; der Dashboard-Benutzerdienst kann ohne KDE-Anmeldung
+starten. `maintenance/setup-teacher-wake.sh` bereitet als separat auszuführender
+Root-Schritt den Systemtimer Mo–Fr 17:50 Europe/Berlin mit `WakeSystem=true` vor.
+Das Installationsskript selbst versetzt den PC nicht in Standby. Ein
+Benutzer-Timer hat diese Aufwachrechte nicht.
+
+Der getrennte `maintenance/teacher_wake_test.py --suspend-test` benötigt eine ausdrückliche
+Terminabsprache und einen Wiederanlaufweg, falls die Hardware nicht aufwacht.
+Er blockiert konkurrierende GUI-Aufträge, legt einen weckfähigen Testtimer an
+und fordert erst danach Standby an. Ein laufender Rechner oder frühes Aufwecken
+per Tastatur gelten nicht als erfolgreicher Test. Das Ergebnis wird unter
+`/var/lib/cisco-lab-teacher-wake/last-test.json` gespeichert. Noch kein echter
+Standby-Test durchgeführt; Einschalten aus vollständigem Ausschalten (S5) bleibt
+zusätzlich offen. Teacher-eigene Updates sind noch nicht aktiviert.

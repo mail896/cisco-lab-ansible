@@ -113,17 +113,17 @@ New backups contain project sources, private configuration, SSH material,
 wallpaper library, user services and dashboard state including credentials and
 run history. Encrypted archives reside on `data/backup_data`; optional SCP sends
 the archive and SHA-256 file to the configured macOS host. The SCP password file
-and recovery key are excluded. Store the recovery key separately off the teacher PC.
+and recovery key are excluded. The operator has confirmed secure off-host storage of the recovery key.
 
-The 7 November archive was restored in isolation: 383 files, matching SSH key
-and a restored dashboard returning HTTP 200. This tests configuration recovery,
+The 7 November 15:59 archive includes the root system export. An isolated
+restore verified 386 files and 12 embedded system files, a matching SSH key,
+TLS/Veyon keys with matching ownership and modes, and a dashboard returning HTTP 200. This tests configuration recovery,
 not a complete replacement computer. Older 6 November backups do not include
 complete dashboard state.
 
 Root-only TLS/Veyon configuration requires the fixed
 `maintenance/teacher-backup-system.py` exporter and an exact no-argument sudo
-allowlist. Teacher setup is prepared and still requires the administrator to
-run it. Each backup record shows whether this system export was included.
+allowlist. The administrator has completed Teacher setup and its export was verified. Each backup record shows whether this system export was included.
 The dashboard user service must permit that specific sudo invocation.
 
 Retention preserves 90 days plus the latest explicitly confirmed working
@@ -131,3 +131,17 @@ backup. Without confirmation, the newest successful backup is preserved.
 Confirmation requires a matching checksum. Only known archive pairs are pruned;
 failed off-host pruning preserves the local copy. Public GitHub sources and
 documentation are separate from operational recovery backups.
+
+
+## Teacher wake preparation
+
+Linger is enabled for the dashboard user service. The separate root setup
+`maintenance/setup-teacher-wake.sh` installs a system timer with `WakeSystem=true`
+for Monday–Friday 17:50 Europe/Berlin. Setup itself never suspends the computer.
+The separate two-minute `maintenance/teacher_wake_test.py --suspend-test` requires an agreed
+test window and a recovery route if hardware wake fails. It serializes against
+GUI jobs, arms a wake-capable timer and then requests suspend. A running machine
+or early keyboard wake cannot pass. Results go to
+`/var/lib/cisco-lab-teacher-wake/last-test.json`. The physical suspend/wake test
+has not yet run. Power-on from full shutdown (S5) and Teacher self-updates remain
+separate unfinished work.

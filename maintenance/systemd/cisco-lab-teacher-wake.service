@@ -1,0 +1,11 @@
+[Unit]
+Description=CISCO-LAB scheduled teacher wake checkpoint
+ConditionHost=LAB-Teacher
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/logger --tag=cisco-lab-teacher-wake --priority=daemon.info "Geplanter Teacher-Aufwachzeitpunkt erreicht; Clientwartung ab 18 Uhr."
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true

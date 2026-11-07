@@ -37,9 +37,9 @@ Further clients will follow their gradual reinstallation with nonpersistent
 tmpfs. Teacher-PC wake and its own maintenance remain open. Profile deletion
 has been dropped.
 
-A new encrypted backup was restored in isolation: 383 files, matching SSH key
-and a working dashboard. Root-only system configuration still requires the
-prepared administrator setup. Retention: 90 days plus the latest confirmed
+A new encrypted backup was restored in isolation: 386 files, matching SSH key
+and a working dashboard. The root export with 12 system files, including
+TLS/Veyon keys, is also verified. Retention: 90 days plus the latest confirmed
 working backup.
 
 [Installation](docs/media/dashboard-installation.jpg) · [Maintenance results](docs/media/dashboard-maintenance.jpg) · [Backup](docs/media/dashboard-backup.jpg)

@@ -37,9 +37,9 @@ registriert. Die weitere Einführung erfolgt nach schrittweiser Neuinstallation
 mit nichtpersistentem tmpfs. Teacher-Aufwachen und seine eigene Wartung sind noch
 offen. Die Profil-Löschfunktion entfällt.
 
-Eine neue verschlüsselte Sicherung wurde isoliert wiederhergestellt: 383 Dateien,
-passender SSH-Schlüssel und funktionsfähiger Dashboard-Start. Rootgeschützte
-Systemdateien benötigen noch die vorbereitete Admin-Einrichtung. Rotation:
+Eine neue verschlüsselte Sicherung wurde isoliert wiederhergestellt: 386 Dateien,
+passender SSH-Schlüssel und funktionsfähiger Dashboard-Start. Der zusätzliche
+Root-Export mit 12 Systemdateien einschließlich TLS-/Veyon-Schlüsseln ist geprüft. Rotation:
 90 Tage plus letzte bestätigte funktionierende Sicherung.
 
 [Installationsfolge](docs/media/dashboard-installation.jpg) · [Wartungsergebnisse](docs/media/dashboard-maintenance.jpg) · [Sicherung](docs/media/dashboard-backup.jpg)
