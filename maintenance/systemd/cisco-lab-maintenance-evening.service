@@ -1,0 +1,14 @@
+[Unit]
+Description=CISCO-LAB evening maintenance and restart pilot on LAB-08A
+ConditionHost=LAB-08A
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RuntimeDirectory=cisco-lab-maintenance
+RuntimeDirectoryMode=0755
+WorkingDirectory=/usr/local/lib/cisco-lab-maintenance
+ExecStart=/usr/bin/python3 -B -m maintenance.pilot --host LAB-08A --evening-restart
+ExecStopPost=/usr/bin/python3 -B -m maintenance.pilot --host LAB-08A --cleanup
+TimeoutStartSec=infinity

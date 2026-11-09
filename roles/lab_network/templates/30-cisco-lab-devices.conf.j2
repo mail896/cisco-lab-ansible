@@ -1,0 +1,10 @@
+# Restrict activation by verified hardware MAC, independent of interface names.
+[device-cisco-lab-school]
+match-device=mac:{{ lab_network_manifest.identity.school.mac }}
+allowed-connections=uuid:{{ lab_network_manifest.identity.school.uuid }}
+stop-match=yes
+
+[device-cisco-lab-labor]
+match-device=mac:{{ lab_network_manifest.identity.lab.mac }}
+allowed-connections=uuid:{{ lab_network_manifest.identity.lab.uuid }}
+stop-match=yes

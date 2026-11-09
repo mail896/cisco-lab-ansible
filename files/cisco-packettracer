@@ -1,0 +1,28 @@
+#!/bin/sh
+# The LAB operator can approve this fixed version centrally. Cisco's own
+# noninteractive activation then also handles new, temporary user profiles.
+set -eu
+lab_pt_version=$(/usr/bin/dpkg-query -W -f='${Status} ${Version}' packettracer 2>/dev/null || true)
+lab_pt_approval=$(cat /etc/cisco-lab/packettracer-eula-version 2>/dev/null || true)
+lab_user_home=$(getent passwd "$(id -un)" | cut -d: -f6)
+# Seed only a new 9.0 profile from the neutral LAB preferences. Existing personal
+# settings and all Cisco authentication files remain under the user's control.
+lab_pt_defaults=/etc/cisco-lab/packettracer-9.0.defaults
+if [ "$lab_pt_version" = 'install ok installed 9.0' ] && [ -r "$lab_pt_defaults" ] &&
+   [ -n "$lab_user_home" ] && [ ! -e "$lab_user_home/pt/PT.conf" ] && [ ! -L "$lab_user_home/pt/PT.conf" ]; then
+    (umask 077; mkdir -p -- "$lab_user_home/pt" && cp -n -- "$lab_pt_defaults" "$lab_user_home/pt/PT.conf") ||
+        printf '%s\n' 'LAB-Startvorgaben konnten nicht übernommen werden; Packet Tracer startet mit eigenen Vorgaben.' >&2
+fi
+if [ "$lab_pt_version" = 'install ok installed 9.0' ] && [ "$lab_pt_approval" = '9.0' ]; then
+    exec /usr/bin/env DEBIAN_FRONTEND=noninteractive /opt/pt/packettracer.AppImage "$@"
+fi
+
+# Without central approval keep Cisco's interactive first-use acceptance visible.
+lab_pt_state="$lab_user_home/.local/.packettracer"
+if [ "$lab_pt_version" != 'install ok installed 9.0' ] ||
+   [ ! -s "$lab_pt_state/eula-Cisco_Packet_Tracer_9.0.0" ] ||
+   [ ! -s "$lab_pt_state/active-version" ]; then
+    exec /usr/bin/konsole --separate --hide-menubar --hide-tabbar \
+        -e /opt/pt/packettracer.AppImage "$@"
+fi
+exec /opt/pt/packettracer.AppImage "$@"

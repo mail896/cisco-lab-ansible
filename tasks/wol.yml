@@ -1,0 +1,85 @@
+---
+- name: WOL-Fähigkeit am geprüften Schulanschluss lesen
+  ansible.builtin.command:
+    argv: [ethtool, "{{ lab_network_manifest.identity.school.interface }}"]
+  environment:
+    LC_ALL: C
+  register: lab_wol_driver
+  changed_when: false
+
+- name: Magic-Packet-Unterstützung des Schulanschlusses verlangen
+  ansible.builtin.assert:
+    that:
+      - lab_wol_driver.stdout is search('Supports Wake-on:\\s*[a-z]*g[a-z]*')
+
+- name: Dauerhafte WOL-Vorgabe des geprüften Schulprofils lesen
+  ansible.builtin.command:
+    argv: [nmcli, '-g', 802-3-ethernet.wake-on-lan, connection, show, uuid, "{{ lab_network_manifest.identity.school.uuid }}"]
+  register: lab_wol_profile
+  changed_when: false
+
+- name: WOL bei Bedarf ohne Neuaktivierung der Schulverbindung einrichten
+  when: "'magic' not in lab_wol_profile.stdout or not (lab_wol_driver.stdout is search('(?m)^\\s*Wake-on:\\s*g\\s*$'))"
+  block:
+    - name: Schulprofildatei vor Änderung sichern
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            import json, sys
+            source = {{ lookup('ansible.builtin.file', playbook_dir + '/roles/lab_desktop/files/snapshot.py') | to_json }}
+            scope = {'__name__': 'wol_snapshot'}
+            exec(source, scope)
+            print(scope['snapshot'](json.load(sys.stdin), '/var/backups/cisco-lab/wol'))
+        stdin: "{{ [lab_network_verified.profile_paths.school] | to_json }}"
+      register: lab_wol_backup
+
+    - name: Magic Packet im vorhandenen Profil speichern
+      ansible.builtin.command:
+        argv: [nmcli, connection, modify, uuid, "{{ lab_network_manifest.identity.school.uuid }}", 802-3-ethernet.wake-on-lan, magic]
+      when: "'magic' not in lab_wol_profile.stdout"
+
+    - name: WOL im laufenden Treiber aktivieren
+      ansible.builtin.command:
+        argv: [ethtool, '-s', "{{ lab_network_manifest.identity.school.interface }}", wol, g]
+
+    - name: Tatsächlichen Treiberzustand nach der Einrichtung prüfen
+      ansible.builtin.command:
+        argv: [ethtool, "{{ lab_network_manifest.identity.school.interface }}"]
+      environment:
+        LC_ALL: C
+      register: lab_wol_after
+      changed_when: false
+      failed_when: "not (lab_wol_after.stdout is search('(?m)^\\s*Wake-on:\\s*g\\s*$'))"
+  rescue:
+    - name: Vorherige Profildatei bei fehlgeschlagener WOL-Einrichtung wiederherstellen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir + '/roles/lab_desktop/files/snapshot.py') }}"
+          - --restore
+          - "{{ lab_wol_backup.stdout }}"
+      when: lab_wol_backup.rc | default(1) == 0
+
+    - name: Wiederhergestellte Profile ohne Verbindungswechsel einlesen
+      ansible.builtin.command:
+        argv: [nmcli, connection, reload]
+      when: lab_wol_backup.rc | default(1) == 0
+
+    - name: Vorherigen WOL-Treiberzustand ebenfalls wiederherstellen
+      ansible.builtin.command:
+        argv:
+          - ethtool
+          - '-s'
+          - "{{ lab_network_manifest.identity.school.interface }}"
+          - wol
+          - "{{ lab_wol_driver.stdout | regex_findall('(?m)^\\s*Wake-on:\\s*([a-z]+)\\s*$') | first }}"
+      when: lab_wol_driver.stdout is search('(?m)^\\s*Wake-on:\\s*[a-z]+\\s*$')
+
+    - name: WOL-Fehler zur Prüfung melden
+      ansible.builtin.fail:
+        msg: WOL-Einrichtung fehlgeschlagen. Schulprofil wurde gesichert und bei Bedarf wiederhergestellt.

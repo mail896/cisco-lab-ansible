@@ -1,0 +1,7 @@
+---
+- name: Ausgewählte Debian-Software auf einem LAB-Client installieren
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  tasks:
+    - ansible.builtin.import_tasks: tasks/software-install.yml

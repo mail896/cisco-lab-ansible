@@ -1,0 +1,98 @@
+---
+- name: Vorhandene Packet-Tracer-Installation auf LAB-08A absichern
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Nur den bestätigten Pilotclient zulassen
+      ansible.builtin.assert:
+        that:
+          - lab_packettracer_pilot_confirmed | default(false) | bool
+          - ansible_play_hosts_all == ['LAB-08A']
+          - ansible_host == '203.0.113.15'
+
+    - name: Geprüften Paketstand sichern und Paketdateien vor Änderungen schützen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - |
+            import hashlib
+            import json
+            import os
+            from pathlib import Path
+            import socket
+            import stat
+            import subprocess
+            import tempfile
+
+            def run(*args, check=True):
+                return subprocess.run(args, capture_output=True, text=True, check=check)
+
+            if socket.gethostname().lower() != 'lab-08a':
+                raise SystemExit('Unerwarteter Rechnername.')
+            package = run('dpkg-query', '-W', '-f=${Status} ${Version}', 'packettracer')
+            if package.stdout != 'install ok installed 9.0':
+                raise SystemExit('Erwartet wird die geprüfte Version 9.0.')
+
+            directory = Path('/opt/pt')
+            app = directory / 'packettracer.AppImage'
+            entries = []
+            for path, expected_type in ((directory, stat.S_ISDIR), (app, stat.S_ISREG)):
+                current = path.lstat()
+                if not expected_type(current.st_mode):
+                    raise SystemExit(f'Unerwarteter Dateityp: {path}')
+                mode = stat.S_IMODE(current.st_mode)
+                override = run('dpkg-statoverride', '--list', str(path), check=False)
+                expected = f'root root 755 {path}'
+                if (override.returncode, override.stdout.strip()) not in ((0, expected), (1, '')):
+                    raise SystemExit(f'Unerwartete Paket-Rechtevorgabe: {path}')
+                entries.append(dict(path=str(path), uid=current.st_uid, gid=current.st_gid,
+                                    mode=mode, add_override=override.returncode == 1))
+
+            with app.open('rb') as image:
+                if hashlib.file_digest(image, 'sha256').hexdigest() != (
+                    '3efe3bfb1b01b252ad3ee4c88d5ba48d6f3711fde94b724bd26cc1a4d3cab477'
+                ):
+                    raise SystemExit('Installiertes AppImage weicht vom geprüften Paket ab.')
+
+            pending = [entry for entry in entries if entry['add_override'] or
+                       (entry['uid'], entry['gid'], entry['mode']) != (0, 0, 0o755)]
+            if not pending:
+                print('Bereits abgesichert.')
+                raise SystemExit(0)
+
+            base = Path('/var/backups/cisco-lab/block07')
+            base.mkdir(mode=0o700, parents=True, exist_ok=True)
+            backup = Path(tempfile.mkdtemp(prefix='packettracer-', dir=base))
+            (backup / 'ownership.json').write_text(json.dumps(pending, indent=2))
+            print(f'Sicherung: {backup}', flush=True)
+            added = []
+            touched = []
+            try:
+                for entry in pending:
+                    path = entry['path']
+                    touched.append(entry)
+                    if entry['add_override']:
+                        run('dpkg-statoverride', '--add', 'root', 'root', '0755', path)
+                        added.append(path)
+                    os.chown(path, 0, 0)
+                    os.chmod(path, 0o755)
+                    current = os.stat(path)
+                    if (current.st_uid, current.st_gid, stat.S_IMODE(current.st_mode)) != (0, 0, 0o755):
+                        raise RuntimeError(f'Rechteprüfung fehlgeschlagen: {path}')
+            except BaseException:
+                for path in reversed(added):
+                    run('dpkg-statoverride', '--remove', path)
+                for entry in reversed(touched):
+                    os.chown(entry['path'], entry['uid'], entry['gid'])
+                    os.chmod(entry['path'], entry['mode'])
+                raise
+      register: packettracer_hardening
+      changed_when: "'Sicherung:' in packettracer_hardening.stdout"
+
+    - name: Ergebnis anzeigen
+      ansible.builtin.debug:
+        var: packettracer_hardening.stdout_lines
+      when: not ansible_check_mode

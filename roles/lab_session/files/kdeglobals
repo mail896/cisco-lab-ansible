@@ -1,0 +1,3 @@
+[KSMServer]
+confirmLogout[$i]=true
+loginMode[$i]=emptySession

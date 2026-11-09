@@ -1,0 +1,13 @@
+# Prepared only. Enable after the Teacher timer is confirmed stopped.
+[Unit]
+Description=Schedule registered CISCO-LAB clients on APP
+ConditionHost=apps
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 18,19:00/10:00 Europe/Berlin
+Persistent=false
+AccuracySec=20s
+Unit=cisco-lab-controller.service
+
+[Install]
+WantedBy=timers.target

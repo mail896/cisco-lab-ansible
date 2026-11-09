@@ -1,0 +1,13 @@
+name: Public source policy
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  public-tree:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check committed public files
+        run: python3 -B deployment/check_public_tree.py --ref HEAD
+      - name: Test publication boundaries
+        run: python3 -B -m unittest tests.test_public_export

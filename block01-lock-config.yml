@@ -1,0 +1,106 @@
+---
+- name: KDE-Konfigurationsdialoge sperren – gezielter LAB-08A-Test
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  vars:
+    lab_lock_policy: /etc/cisco-lab/xdg/kdeglobals
+    lab_lock_source: "{{ playbook_dir }}/roles/lab_desktop/files/kdeglobals"
+  tasks:
+    - name: Vergleichsgeraet und versehentliche Raumverteilung ausschliessen
+      ansible.builtin.assert:
+        that:
+          - lab_block01_lock_test_confirmed | default(false) | bool
+          - inventory_hostname == 'LAB-08A'
+          - ansible_host == '203.0.113.15'
+          - ansible_play_hosts_all == ['LAB-08A']
+
+    - name: Lokale grafische Sitzung vor jeder Aenderung ausschliessen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -B
+          - -c
+          - |
+            import socket, subprocess
+            assert socket.gethostname().upper() == 'LAB-08A'
+            rows = subprocess.check_output(['loginctl','list-sessions','--no-legend'],text=True)
+            for row in rows.splitlines():
+                info = subprocess.check_output(['loginctl','show-session',row.split()[0],'-p','Class','-p','Type'],text=True)
+                fields = dict(s.split('=',1) for s in info.splitlines())
+                if fields.get('Type') in ('x11','wayland') and fields.get('Class','').startswith('user'):
+                    raise SystemExit('Vor dem Kiosk-Test erst abmelden.')
+      changed_when: false
+      check_mode: false
+
+    - name: Vorhandenen Kiosk-Dateityp und Eigentuemer pruefen
+      ansible.builtin.stat:
+        path: "{{ lab_lock_policy }}"
+        follow: false
+      register: lab_lock_stat
+
+    - name: Keine umgeleitete oder fremd beschreibbare Kiosk-Datei ersetzen
+      ansible.builtin.assert:
+        that:
+          - lab_lock_stat.stat.isreg | default(false)
+          - not lab_lock_stat.stat.islnk | default(false)
+          - lab_lock_stat.stat.uid == 0
+          - not lab_lock_stat.stat.wgrp
+          - not lab_lock_stat.stat.woth
+
+    - name: Vorhandene Kiosk-Datei lesen
+      ansible.builtin.slurp:
+        src: "{{ lab_lock_policy }}"
+      register: lab_lock_before
+
+    - name: Unbekannte zusaetzliche Vorgaben nicht ueberschreiben
+      ansible.builtin.assert:
+        that:
+          - >-
+            (lab_lock_before.content | b64decode | trim) in
+            ['[KDE Action Restrictions][$i]\nplasma/plasmashell/unlockedDesktop=false',
+             '[KDE Action Restrictions][$i]\nplasma/plasmashell/unlockedDesktop=false\nplasma/allow_configure_when_locked=false',
+             lookup('ansible.builtin.file', lab_lock_source) | trim]
+        fail_msg: Vorhandene Kiosk-Datei weicht ab; vor Migration gezielt vergleichen.
+
+    - name: Betroffene Datei vor Aenderung sichern
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -B
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir + '/roles/lab_desktop/files/snapshot.py') }}"
+        stdin: '["/etc/cisco-lab/xdg/kdeglobals"]'
+      register: lab_lock_backup
+      changed_when: true
+      when: not ansible_check_mode
+
+    - name: Teststand und Rueckweg im Sicherungsordner dokumentieren
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ lab_lock_backup.stdout }}/{{ item.name }}"
+        owner: root
+        group: root
+        mode: '0600'
+      loop:
+        - {src: "{{ playbook_dir }}/block01-lock-config.yml", name: block01-lock-config.yml}
+        - {src: "{{ lab_lock_source }}", name: kdeglobals.test}
+        - {src: "{{ playbook_dir }}/roles/lab_desktop/files/snapshot.py", name: restore.py}
+      when: not ansible_check_mode
+
+    - name: Gepruefte LAB-Kiosk-Datei bereitstellen
+      ansible.builtin.copy:
+        src: "{{ lab_lock_source }}"
+        dest: "{{ lab_lock_policy }}"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Naechsten Anmeldetest und Sicherung nennen
+      ansible.builtin.debug:
+        msg: >-
+          Nur LAB-Kiosk-Datei aktualisiert. Kein Neustart oder App-Start.
+          Bei naechster Anmeldung Hintergrund- und Anzeige-Modul sowie Desktop-/
+          Taskmanager-Menues pruefen. Lautstaerke und Netzwerkbedienung erhalten.
+          Sicherung:
+          {{ lab_lock_backup.stdout | default('Check-Mode: keine Sicherung') }}.

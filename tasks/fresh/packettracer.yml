@@ -1,0 +1,128 @@
+---
+- name: Paketstatus abfragen und fremde Packet-Tracer-Version nicht ersetzen
+  ansible.builtin.command:
+    argv: [dpkg-query, -W, '-f=${Status} ${Version}', packettracer]
+  register: lab_fresh_packettracer_status
+  changed_when: false
+  failed_when: >-
+    lab_fresh_packettracer_status.rc not in [0, 1] or
+    (lab_fresh_packettracer_status.rc == 0 and
+     lab_fresh_packettracer_status.stdout != 'install ok installed 9.0')
+
+- name: Paket-Rechtevorgaben kontrollieren
+  ansible.builtin.command:
+    argv: [dpkg-statoverride, --list, "{{ item }}"]
+  loop: [/opt/pt, /opt/pt/packettracer.AppImage]
+  register: lab_fresh_packettracer_overrides
+  changed_when: false
+  failed_when: >-
+    lab_fresh_packettracer_overrides.rc not in [0, 1] or
+    (lab_fresh_packettracer_overrides.rc == 0 and
+     lab_fresh_packettracer_overrides.stdout | trim != 'root root 755 ' + item)
+
+- name: Rechtevorgaben vor dem Auspacken des Pakets hinterlegen
+  ansible.builtin.command:
+    argv: [dpkg-statoverride, --add, root, root, '0755', "{{ item.item }}"]
+  loop: "{{ lab_fresh_packettracer_overrides.results }}"
+  when: item.rc == 1
+
+- name: Fehlendes Paket aus geprüftem lokalen Archiv installieren
+  when: lab_fresh_packettracer_status.rc == 1
+  block:
+    - name: Root-geschützten Paketcache bereitstellen
+      ansible.builtin.file:
+        path: /var/cache/cisco-lab/packettracer
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Packet-Tracer-Archiv kopieren
+      ansible.builtin.copy:
+        src: "{{ lab_fresh_packettracer_deb }}"
+        dest: /var/cache/cisco-lab/packettracer/packettracer-9.0.deb
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Prüfsumme der übertragenen Datei feststellen
+      ansible.builtin.stat:
+        path: /var/cache/cisco-lab/packettracer/packettracer-9.0.deb
+        checksum_algorithm: sha256
+      register: lab_fresh_packettracer_remote
+
+    - name: Nur das geprüfte Paket installieren
+      ansible.builtin.assert:
+        that: lab_fresh_packettracer_remote.stat.checksum == lab_fresh_packettracer_sha256
+
+    - name: Packet Tracer 9.0 installieren
+      ansible.builtin.apt:
+        deb: /var/cache/cisco-lab/packettracer/packettracer-9.0.deb
+        state: present
+
+- name: Installiertes AppImage und Elternverzeichnis prüfen
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    follow: false
+    checksum_algorithm: sha256
+  loop: [/opt/pt, /opt/pt/packettracer.AppImage]
+  register: lab_fresh_packettracer_files
+
+- name: Geprüften Inhalt und sichere Paketpfade verlangen
+  ansible.builtin.assert:
+    that:
+      - lab_fresh_packettracer_files.results[0].stat.isdir | default(false)
+      - lab_fresh_packettracer_files.results[1].stat.isreg | default(false)
+      - lab_fresh_packettracer_files.results[1].stat.checksum == lab_fresh_packettracer_app_sha256
+
+- name: Root-Rechte auch bei vorhandenem Paketstand herstellen
+  ansible.builtin.file:
+    path: "{{ item.item }}"
+    state: "{{ 'directory' if item.stat.isdir else 'file' }}"
+    owner: root
+    group: root
+    mode: '0755'
+  loop: "{{ lab_fresh_packettracer_files.results }}"
+
+- name: Ausdrücklich bestätigte Betreiberzustimmung für Packet Tracer 9.0 hinterlegen
+  cisco_lab_files:
+    files:
+      - dest: /etc/cisco-lab/packettracer-eula-version
+        content: "9.0\n"
+        mode: '0644'
+  when: (lab_fresh_packettracer_eula_version | default('')) == '9.0'
+
+- name: Neutrale Packet-Tracer-Startvorgaben für neue RAM-Profile bereitstellen
+  ansible.builtin.copy:
+    src: "{{ lab_fresh_packettracer_defaults }}"
+    dest: /etc/cisco-lab/packettracer-9.0.defaults
+    owner: root
+    group: root
+    mode: '0644'
+  when: (lab_fresh_packettracer_defaults | default('') | length) > 0
+
+- name: Gemeinsamen Packet-Tracer-Starter bereitstellen
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/cisco-packettracer"
+    dest: /usr/local/bin/cisco-packettracer
+    owner: root
+    group: root
+    mode: '0755'
+    validate: /bin/sh -n %s
+
+- name: Geprüften Packet-Tracer-Starter bereitstellen
+  ansible.builtin.copy:
+    dest: /usr/share/applications/packettracer.desktop
+    owner: root
+    group: root
+    mode: '0644'
+    validate: /usr/bin/desktop-file-validate %s
+    content: |
+      [Desktop Entry]
+      Type=Application
+      Name=Cisco Packet Tracer
+      Exec=/usr/local/bin/cisco-packettracer
+      Icon=Cisco_Packet_Tracer_9.0.0
+      Terminal=false
+      Categories=Education;Network;
+      StartupNotify=true

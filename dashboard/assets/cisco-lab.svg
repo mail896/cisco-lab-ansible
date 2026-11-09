@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cisco-Lab">
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0876b9"/><stop offset="1" stop-color="#113151"/></linearGradient>
+    <linearGradient id="gold" x2="0" y2="1"><stop stop-color="#ffe45d"/><stop offset="1" stop-color="#f7ac22"/></linearGradient>
+  </defs>
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="url(#bg)" stroke="#ffffff" stroke-opacity=".38" stroke-width="2"/>
+  <path d="M16 18 32 32l16-14M16 46l16-14 16 14M16 18v28M48 18v28" fill="none" stroke="#fff" stroke-opacity=".76" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="16" cy="18" r="5" fill="#fff"/>
+  <circle cx="48" cy="18" r="5" fill="#fff"/>
+  <circle cx="16" cy="46" r="5" fill="#fff"/>
+  <circle cx="48" cy="46" r="5" fill="#fff"/>
+  <rect x="25" y="25" width="14" height="14" rx="3" fill="url(#gold)" stroke="#fff" stroke-width="1.5"/>
+  <path d="M29 32h6M32 29v6" stroke="#193d60" stroke-width="2" stroke-linecap="round"/>
+</svg>

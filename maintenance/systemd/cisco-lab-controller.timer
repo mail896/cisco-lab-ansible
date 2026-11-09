@@ -1,0 +1,12 @@
+[Unit]
+Description=Start registered LAB clients during the evening maintenance window
+ConditionHost=LAB-Teacher
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 18,19:00/10:00 Europe/Berlin
+Persistent=false
+AccuracySec=20s
+Unit=cisco-lab-controller.service
+
+[Install]
+WantedBy=timers.target

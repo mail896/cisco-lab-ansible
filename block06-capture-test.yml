@@ -1,0 +1,134 @@
+---
+- name: Wireshark-Ersatzquelle auf LAB-08A testen
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  vars:
+    capture_assets:
+      - {src: capture_service.py, dest: /usr/local/lib/cisco-lab/network/capture_service.py, mode: '0644'}
+      - {src: capture_extcap.py, dest: /usr/local/lib/cisco-lab/extcap/cisco-lab-usb, mode: '0755'}
+      - {src: systemd/cisco-lab-capture@.service, dest: /etc/systemd/system/cisco-lab-capture@.service, mode: '0644'}
+    capture_socket: /etc/systemd/system/cisco-lab-capture.socket
+    capture_snapshot_source: "{{ lookup('ansible.builtin.file', playbook_dir + '/roles/lab_desktop/files/snapshot.py') }}"
+  tasks:
+    - name: Ausschließlich den bestätigten Testclient zulassen
+      ansible.builtin.assert:
+        that:
+          - lab_capture_test_confirmed | default(false) | bool
+          - ansible_play_hosts_all == ['LAB-08A']
+          - inventory_hostname == 'LAB-08A'
+          - ansible_host == '203.0.113.15'
+
+    - name: Geprüfte LAB-Hardwarezuordnung und funktionierenden Vermittler voraussetzen
+      ansible.builtin.command:
+        argv: [/usr/bin/python3, -IB, /usr/local/lib/cisco-lab/network/broker/healthcheck.py]
+      changed_when: false
+      check_mode: false
+
+    - name: Gruppen-ID auf dem Testclient auflösen
+      ansible.builtin.getent:
+        database: group
+        key: cisco.lab
+
+    - name: Gültige LAB-Gruppen-ID verlangen
+      ansible.builtin.assert:
+        that: ansible_facts.getent_group['cisco.lab'][1] | int > 0
+
+    - name: Programmpfad für die Testquelle vorbereiten
+      ansible.builtin.file:
+        path: /usr/local/lib/cisco-lab/extcap
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Dateizustand und Quellen des Piloten sichern
+      when: not ansible_check_mode
+      block:
+        - name: Betroffene Dateien und Socket-Aktivierung sichern
+          ansible.builtin.command:
+            argv:
+              - /usr/bin/python3
+              - -IB
+              - -c
+              - |
+                import json, sys
+                scope = {'__name__': 'capture_snapshot'}
+                exec({{ capture_snapshot_source | to_json }}, scope)
+                print(scope['snapshot'](json.load(sys.stdin), '/var/backups/cisco-lab/block06'))
+            stdin: "{{ ((capture_assets | map(attribute='dest') | list) + [capture_socket]) | to_json }}"
+          register: capture_backup
+
+        - name: Kandidaten und Rückweg zur Sicherung ablegen
+          ansible.builtin.copy:
+            src: "{{ item.src }}"
+            dest: "{{ capture_backup.stdout }}/{{ item.dest }}"
+            owner: root
+            group: root
+            mode: '0600'
+          loop:
+            - {src: roles/lab_desktop/files/snapshot.py, dest: restore.py}
+            - {src: block06-capture-test.yml, dest: block06-capture-test.yml}
+            - {src: network/capture_service.py, dest: capture_service.py}
+            - {src: network/capture_extcap.py, dest: capture_extcap.py}
+            - {src: network/systemd/cisco-lab-capture.socket, dest: cisco-lab-capture.socket}
+            - {src: network/systemd/cisco-lab-capture@.service, dest: cisco-lab-capture@.service}
+
+    - name: Nur die neue Quelle für den Funktionstest installieren
+      when: not ansible_check_mode
+      block:
+        - name: Dienst und unprivilegierte Wireshark-Erweiterung installieren
+          ansible.builtin.copy:
+            src: "network/{{ item.src }}"
+            dest: "{{ item.dest }}"
+            owner: root
+            group: root
+            mode: "{{ item.mode }}"
+          loop: "{{ capture_assets }}"
+
+        - name: Socket mit der geprüften Gruppen-ID installieren
+          ansible.builtin.copy:
+            content: "{{ lookup('ansible.builtin.file', playbook_dir + '/network/systemd/cisco-lab-capture.socket') | replace('root:cisco.lab', 'root:+' + (ansible_facts.getent_group['cisco.lab'][1] | string)) }}\n"
+            dest: "{{ capture_socket }}"
+            owner: root
+            group: root
+            mode: '0644'
+
+        - name: Socket nur für den laufenden Pilotversuch starten
+          ansible.builtin.systemd_service:
+            name: cisco-lab-capture.socket
+            daemon_reload: true
+            state: started
+
+        - name: Socket-Rechte prüfen
+          ansible.builtin.stat:
+            path: /run/cisco-lab-capture.sock
+            follow: false
+          register: capture_socket_info
+
+        - name: Root-eigenen und gruppenbeschränkten Socket verlangen
+          ansible.builtin.assert:
+            that:
+              - capture_socket_info.stat.issock
+              - capture_socket_info.stat.uid == 0
+              - capture_socket_info.stat.gid == (ansible_facts.getent_group['cisco.lab'][1] | int)
+              - capture_socket_info.stat.mode == '0660'
+      rescue:
+        - name: Test-Socket beenden
+          ansible.builtin.systemd_service:
+            name: cisco-lab-capture.socket
+            state: stopped
+          failed_when: false
+        - name: Gesicherte Dateizustände wiederherstellen
+          ansible.builtin.command:
+            argv: [/usr/bin/python3, -IB, "{{ capture_backup.stdout }}/restore.py", --restore, "{{ capture_backup.stdout }}"]
+        - name: Unit-Dateien neu einlesen
+          ansible.builtin.systemd_service:
+            daemon_reload: true
+        - name: Fehlgeschlagenen Funktionstest melden
+          ansible.builtin.fail:
+            msg: "Pilotquelle fehlgeschlagen. Dateizustand aus {{ capture_backup.stdout }} wiederhergestellt."
+
+    - name: Rückweg und nächsten Test melden
+      ansible.builtin.debug:
+        msg: "Sicherung {{ capture_backup.stdout | default('Check-Modus') }}. Zuerst reale USB-Aufnahme mit der Testquelle prüfen."

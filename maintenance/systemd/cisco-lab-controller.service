@@ -1,0 +1,11 @@
+[Unit]
+Description=CISCO-LAB registered client maintenance controller
+ConditionHost=LAB-Teacher
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/ansible-cisco-lab
+ExecStart=/usr/bin/python3 -B -m maintenance.controller
+UMask=0077
+TimeoutStartSec=infinity
+NoNewPrivileges=true

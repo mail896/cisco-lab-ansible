@@ -1,0 +1,71 @@
+---
+- name: Neustartkorrektur auf feste Schülerclients begrenzen
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname is match('^LAB-0[1-8][AB]$')
+      - >-
+        ansible_host == ('203.0.113.' ~
+          ((((inventory_hostname[4:6] | int) - 1) * 2 +
+            (1 if inventory_hostname[-1] == 'A' else 2)) | string))
+    fail_msg: Die PCI-Neustartkorrektur ist ausschließlich für die 16 festen Schülerclients freigegeben.
+
+- name: Rechneridentität vor GRUB-Änderung prüfen
+  ansible.builtin.command:
+    argv: [hostname]
+  register: lab_reboot_identity
+  changed_when: false
+  check_mode: false
+  failed_when: lab_reboot_identity.stdout | trim != inventory_hostname
+
+- name: Verzeichnis für ergänzende GRUB-Vorgaben bereitstellen
+  ansible.builtin.file:
+    path: /etc/default/grub.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Bekannten PCI-Neustartfix ergänzen
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/cisco-lab-reboot.cfg"
+    dest: /etc/default/grub.d/99-cisco-lab-reboot.cfg
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+    validate: /bin/sh -n %s
+  register: lab_reboot_config
+
+- name: GRUB nach Änderung der PCI-Vorgabe aktualisieren
+  ansible.builtin.command:
+    argv: [/usr/sbin/update-grub]
+  when: lab_reboot_config.changed
+  changed_when: true
+
+- name: Erzeugte GRUB-Konfiguration prüfen
+  ansible.builtin.command:
+    argv: [/usr/bin/grub-script-check, /boot/grub/grub.cfg]
+  when: lab_reboot_config.changed
+  changed_when: false
+
+- name: PCI-Reset bereits für den nächsten regulären Neustart aktivieren
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -IB
+      - -c
+      - |
+        import json
+        from pathlib import Path
+
+        path = Path('/sys/kernel/reboot/type')
+        before = path.read_text().strip()
+        if before != 'pci':
+            path.write_text('pci\n')
+        after = path.read_text().strip()
+        if after != 'pci':
+            raise SystemExit('PCI-Reset wurde vom laufenden Kernel nicht übernommen.')
+        print(json.dumps({'changed': before != after, 'before': before, 'type': after}))
+  when: not ansible_check_mode
+  register: lab_reboot_runtime
+  changed_when: (lab_reboot_runtime.stdout | from_json).changed

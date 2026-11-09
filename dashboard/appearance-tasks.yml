@@ -1,0 +1,114 @@
+---
+- name: LAB-Bilder und zugehörige Einstellungen mit dem Sollstand vergleichen
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -IB
+      - -c
+      - "{{ lookup('ansible.builtin.file', playbook_dir + '/dashboard/appearance-current.py') }}"
+      - "{{ dashboard_desktop_sha256 }}"
+      - "{{ dashboard_lock_sha256 }}"
+  register: lab_appearance_current
+  changed_when: false
+  check_mode: false
+
+- name: Übereinstimmenden LAB-Bildstand protokollieren
+  ansible.builtin.debug:
+    msg: "{{ lab_appearance_current.stdout_lines }}"
+  when: lab_appearance_current.stdout_lines | length > 0
+
+- name: Unveränderten Bildstand ohne Sicherung und Kopiervorgang abschließen
+  ansible.builtin.meta: end_host
+  when: "'LAB-Bildstand bereits vollständig installiert.' in lab_appearance_current.stdout_lines"
+
+- name: Vorherige Bilder und KDE-/SDDM-Vorgaben sichern
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -IB
+      - -c
+      - "{{ lookup('ansible.builtin.file', playbook_dir + '/roles/lab_desktop/files/snapshot.py') }}"
+    stdin: >-
+      {{ ['/usr/share/backgrounds/lab.png',
+          '/usr/share/backgrounds/cisco-lab-login.jpg',
+          '/usr/share/sddm/themes/debian-breeze/theme.conf.user',
+          '/etc/cisco-lab/session-xdg/kscreenlockerrc'] | to_json }}
+  register: lab_appearance_snapshot
+
+- name: Rückweg und verwendete Quellen dokumentieren
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ lab_appearance_snapshot.stdout }}/{{ item.name }}"
+    owner: root
+    group: root
+    mode: '0600'
+  loop:
+    - {src: "{{ playbook_dir }}/roles/lab_desktop/files/snapshot.py", name: restore.py}
+    - {src: "{{ playbook_dir }}/dashboard/appearance-tasks.yml", name: appearance.yml}
+    - {src: "{{ playbook_dir }}/dashboard-pilot.yml", name: dashboard-pilot.yml}
+    - {src: "{{ playbook_dir }}/roles/lab_session/tasks/greeter-background.yml", name: greeter-background.yml}
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Bilder und die benötigten Vorgaben gemeinsam anwenden
+  block:
+    - name: SDDM-Bild auch auf älteren LAB-Clients einrichten
+      ansible.builtin.import_tasks: ../roles/lab_session/tasks/greeter-background.yml
+
+    - name: KDE-Sperrbild setzen und übrige Sitzungsregeln erhalten
+      community.general.ini_file:
+        path: /etc/cisco-lab/session-xdg/kscreenlockerrc
+        section: "{{ item.section }}"
+        option: "{{ item.option }}"
+        value: "{{ item.value }}"
+        no_extra_spaces: true
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - {section: Greeter, option: 'WallpaperPlugin[$i]', value: org.kde.image}
+        - {section: 'Greeter][Wallpaper][org.kde.image][General', option: 'Image[$i]', value: 'file:///usr/share/backgrounds/cisco-lab-login.jpg'}
+        - {section: 'Greeter][Wallpaper][org.kde.image][General', option: 'PreviewImage[$i]', value: 'file:///usr/share/backgrounds/cisco-lab-login.jpg'}
+      loop_control:
+        label: "{{ item.option }}"
+
+    - name: Ausgewähltes Desktopbild am bestehenden Pfad installieren
+      ansible.builtin.copy:
+        src: "{{ dashboard_desktop_image }}"
+        dest: /usr/share/backgrounds/lab.png
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Eingespielte Bilder lokal zur Sicherung hinzufügen
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ lab_appearance_snapshot.stdout }}/{{ item.name }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0600'
+      loop:
+        - {src: /usr/share/backgrounds/lab.png, name: applied-desktop.png}
+        - {src: /usr/share/backgrounds/cisco-lab-login.jpg, name: applied-lock.jpg}
+  rescue:
+    - name: Vorherigen Bild- und Konfigurationsstand wiederherstellen
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - "{{ lab_appearance_snapshot.stdout }}/restore.py"
+          - --restore
+          - "{{ lab_appearance_snapshot.stdout }}"
+    - name: Fehlgeschlagenen Bild-Deploy melden
+      ansible.builtin.fail:
+        msg: >-
+          Bild-Deploy bei „{{ ansible_failed_task.name }}“ abgebrochen.
+          Der vorherige Stand wurde aus {{ lab_appearance_snapshot.stdout }} wiederhergestellt.
+
+- name: Sicherung und Sichtprüfung ausweisen
+  ansible.builtin.debug:
+    msg: >-
+      Sicherung {{ lab_appearance_snapshot.stdout }}.
+      Desktop und Sperrbild in einer neuen KDE-Sitzung prüfen.
+      Das SDDM-Bild am neu geladenen Anmeldebildschirm prüfen.

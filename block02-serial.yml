@@ -1,0 +1,19 @@
+---
+- name: Serielle Konsolen – vorbereiteter Test ausschliesslich auf LAB-08A
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  serial: 1
+  pre_tasks:
+    - name: Unbeabsichtigte Verteilung verhindern
+      ansible.builtin.assert:
+        that:
+          - lab_block02_test_confirmed | default(false) | bool
+          - inventory_hostname == 'LAB-08A'
+          - ansible_host == '203.0.113.15'
+          - ansible_play_hosts_all == ['LAB-08A']
+        fail_msg: >-
+          Nur fuer einen spaeter freigegebenen Test mit --limit LAB-08A und
+          -e lab_block02_test_confirmed=true. LAB-08B bleibt unveraendert.
+  roles:
+    - lab_serial

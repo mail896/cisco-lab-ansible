@@ -1,0 +1,34 @@
+Lab network authorisation
+Deutsch: architecture.txt
+
+The school and exercise interfaces have separate purposes. The internal NIC
+uses the school connection, its default route and DNS. The USB Ethernet
+adapter connects to the student's physical network exercise.
+
+NetworkManager's general Polkit write action does not carry a connection
+UUID in the checked 1.52.1 source. The classroom group therefore uses a
+limited dialog and root broker for changes to the USB lab interface.
+See the NetworkManager authorisation and connection-update source:
+https://github.com/NetworkManager/NetworkManager/blob/1.52.1/src/core/nm-auth-manager.c#L369
+https://github.com/NetworkManager/NetworkManager/blob/1.52.1/src/core/settings/nm-settings-connection.c#L1735
+
+The Unix socket identifies callers through kernel peer credentials. The
+broker validates group membership and the active local logind session.
+A root-managed manifest identifies the school and lab adapters by profile
+and hardware. The dialog cannot choose arbitrary adapters, file paths,
+profile identifiers, DNS settings or shell commands.
+
+Lab requests use manual IPv4 and IPv6 addresses and specific routes.
+Default routes and routes overlapping protected school networks are
+rejected. Validate the real school, DNS and management prefixes in the
+manifest when commissioning a new host. A specific route to an unprotected
+destination is part of the lab exercise and can redirect that traffic.
+
+The broker serialises application, recovery and login reset. The recovery
+loop restores the school path and a missing lab profile, while allowing
+students to retain exercise values within their active session. A new
+classroom login resets the lab configuration. Review school connectivity,
+identity matching, rollback and exercise routes on a pilot client before
+extending the configuration to a room.
+
+See ../broker/, ../dialog/ and ../../docs/dashboard.en.md.

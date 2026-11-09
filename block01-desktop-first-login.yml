@@ -1,0 +1,70 @@
+---
+- name: Plasma-Standard für die erste LAB-Anmeldung korrigieren
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  vars:
+    ansible_ssh_use_tty: false
+    lab_first_login_theme_paths:
+      - /etc/cisco-lab/xdg/kdeglobals
+      - /usr/local/libexec/cisco-lab/prepare-desktop
+      - /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/metadata.json
+      - /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/contents/defaults
+      - /usr/share/wallpapers/CiscoLab/metadata.json
+      - /usr/share/wallpapers/CiscoLab/contents/images/1920x1080.png
+  pre_tasks:
+    - name: Ausschließlich ausdrücklich bestätigte LAB-Ziele zulassen
+      ansible.builtin.assert:
+        that:
+          - lab_first_login_confirmed | default(false) | bool
+          - not ansible_check_mode
+          - (ansible_play_hosts_all | sort) == (lab_first_login_targets | default(['LAB-08A']) | sort)
+          - ansible_play_hosts_all == ['LAB-08A'] or (lab_first_login_room_confirmed | default(false) | bool)
+          - inventory_hostname is match('^LAB-0[1-8][AB]$')
+          - ansible_host == ('203.0.113.' ~ (((inventory_hostname[4:6] | int) - 1) * 2 + (1 if inventory_hostname[-1] == 'A' else 2)))
+    - name: Identität und vorhandenen LAB-Desktop prüfen
+      ansible.builtin.raw: >-
+        test "$(hostname)" = {{ inventory_hostname | quote }} &&
+        test -f /usr/share/backgrounds/lab.png &&
+        test -f /etc/cisco-lab/xdg/kdeglobals &&
+        test -x /usr/local/libexec/cisco-lab/prepare-desktop
+      changed_when: false
+  tasks:
+    - name: Vorherige Plasma-Einstellungen sichern
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -IB
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir + '/roles/lab_desktop/files/snapshot.py') }}"
+        stdin: "{{ lab_first_login_theme_paths | to_json }}"
+      register: lab_first_login_snapshot
+    - name: Quellen für die Wiederherstellung sichern
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ lab_first_login_snapshot.stdout }}/{{ item | basename }}"
+        owner: root
+        group: root
+        mode: '0600'
+      loop:
+        - roles/lab_desktop/files/snapshot.py
+        - roles/lab_desktop/tasks/theme.yml
+        - roles/lab_desktop/files/kdeglobals
+        - roles/lab_desktop/files/prepare_desktop.py
+        - block01-desktop-first-login.yml
+    - name: LAB-Standarddesign bereitstellen
+      ansible.builtin.import_tasks: roles/lab_desktop/tasks/theme.yml
+    - name: Verwalteten Desktop-Helfer mit symbolfreier Arbeitsfläche installieren
+      ansible.builtin.copy:
+        src: roles/lab_desktop/files/prepare_desktop.py
+        dest: /usr/local/libexec/cisco-lab/prepare-desktop
+        owner: root
+        group: root
+        mode: '0755'
+    - name: Standarddesign nur in die Konfiguration der LAB-Gruppe aufnehmen
+      ansible.builtin.copy:
+        src: roles/lab_desktop/files/kdeglobals
+        dest: /etc/cisco-lab/xdg/kdeglobals
+        owner: root
+        group: root
+        mode: '0644'

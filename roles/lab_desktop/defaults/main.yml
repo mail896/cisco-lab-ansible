@@ -1,0 +1,15 @@
+---
+lab_desktop_group: cisco.lab
+lab_desktop_wallpaper: /usr/share/backgrounds/lab.png
+lab_clock_url: https://lab-app.example.org/uzeit/downloads/unterrichtszeit_1.0.3_all.deb
+lab_clock_sha256: eb6698a02414500b0812172d3a603ec1231617889b96040e2d69474ab48ab738
+lab_desktop_launchers:
+  - applications:systemsettings.desktop
+  - preferred://filemanager
+  - applications:firefox-esr.desktop
+  - applications:packettracer.desktop
+  - applications:de.bbs-einbeck.unterrichtszeit.desktop
+  - applications:org.kde.konsole.desktop
+  - applications:putty.desktop
+  - applications:cisco-console.desktop
+  - applications:wireshark-lab.desktop

@@ -1,0 +1,17 @@
+---
+- name: Winbind-Reconnect-Fix auf einem freigegebenen LAB-Client einrichten
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  vars:
+    ansible_ssh_use_tty: false
+    ansible_pipelining: true
+  pre_tasks:
+    - name: Ein ausdrücklich ausgewähltes Einzelziel verlangen
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts_all | length == 1
+          - inventory_hostname == (lab_winbind_host | default(''))
+  tasks:
+    - ansible.builtin.import_tasks: tasks/client-pam.yml
+    - ansible.builtin.import_tasks: tasks/winbind.yml
