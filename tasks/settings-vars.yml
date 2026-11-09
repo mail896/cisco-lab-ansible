@@ -1,0 +1,18 @@
+---
+lab_settings_files: "{{ playbook_dir }}/roles/lab_desktop/files"
+lab_settings_env: /etc/xdg/plasma-workspace/env/20-lab-desktop.sh
+lab_settings_helper: /usr/local/libexec/cisco-lab/settings-access
+lab_settings_hook: /etc/dpkg/dpkg.cfg.d/90-cisco-lab-settings-access
+lab_settings_menu: /etc/cisco-lab/settings-menu/applications
+lab_settings_runner: /etc/cisco-lab/xdg/krunnerrc
+lab_settings_favorites_files:
+  - {src: kicker-extra-favoritesrc, dest: /etc/cisco-lab/xdg/kicker-extra-favoritesrc, mode: '0644'}
+  - {src: settings_favorites.py, dest: /usr/local/libexec/cisco-lab/settings-favorites, mode: '0755'}
+  - {src: lab-settings-favorites.desktop, dest: /etc/xdg/autostart/cisco-lab-settings-favorites.desktop, mode: '0644'}
+lab_settings_ids:
+  - systemsettings.desktop
+  - kdesystemsettings.desktop
+  - org.kde.kinfocenter.desktop
+lab_settings_binaries:
+  - /usr/bin/systemsettings
+  - /usr/bin/kcmshell6

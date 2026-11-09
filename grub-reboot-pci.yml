@@ -1,0 +1,8 @@
+---
+- name: Bekannte PCI-Neustartkorrektur auf LAB-Schülerclients ergänzen
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Gemeinsame Neustartkorrektur anwenden
+      ansible.builtin.import_tasks: tasks/reboot-pci.yml

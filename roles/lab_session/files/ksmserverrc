@@ -1,0 +1,7 @@
+[General]
+loginMode[$i]=emptySession
+confirmLogout[$i]=true
+offerShutdown=true
+
+[Legacy]
+sessionShutdownTimeout=1

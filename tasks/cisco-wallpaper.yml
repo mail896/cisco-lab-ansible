@@ -1,0 +1,23 @@
+---
+- name: Gemeinsames LAB-Design für Plasma bereitstellen
+  ansible.builtin.import_tasks: ../roles/lab_desktop/tasks/theme.yml
+
+- name: LAB-Design vor dem Plasma-Start ausschließlich für das Sammelkonto setzen
+  ansible.builtin.copy:
+    dest: /etc/xdg/plasma-workspace/env/19-cisco-lab-wallpaper.sh
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      if [ "$(id -un)" = cisco ] && [ "$HOME" = /var/lib/cisco-lab-local/cisco ] &&
+          [ -r /etc/cisco-lab/local-cisco.json ]; then
+          /usr/bin/kwriteconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage de.bbs-einbeck.cisco-lab
+      fi
+
+- name: Abgelösten Hintergrund-Autostart entfernen
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/xdg/autostart/cisco-lab-cisco-wallpaper.desktop
+    - /usr/local/libexec/cisco-lab/cisco-wallpaper.py

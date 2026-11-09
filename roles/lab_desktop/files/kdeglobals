@@ -1,0 +1,12 @@
+[KDE]
+LookAndFeelPackage[$i]=de.bbs-einbeck.cisco-lab
+
+[KDE Action Restrictions][$i]
+plasma/plasmashell/unlockedDesktop=false
+plasma/allow_configure_when_locked=false
+
+[KDE Control Module Restrictions][$i]
+kcm_wallpaper=false
+kcm_wallpaper.desktop=false
+kcm_kscreen=false
+kcm_kscreen.desktop=false

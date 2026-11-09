@@ -1,0 +1,30 @@
+Berechtigungen im LAB-Netz
+English: architecture.en.txt
+
+Die interne Netzwerkkarte führt ins Schulnetz und stellt Standardroute
+und DNS bereit. Der USB-Ethernet-Adapter verbindet den Rechner mit der
+physischen Netzwerkübung.
+
+In der geprüften NetworkManager-Version 1.52.1 übergibt die allgemeine
+Polkit-Schreibaktion keine Verbindungs-UUID. Deshalb verwenden Schüler
+für Änderungen am USB-Anschluss einen begrenzten Dialog und einen
+privilegierten Vermittlungsdienst.
+
+Der Unix-Socket identifiziert Aufrufer anhand der vom Kernel gelieferten
+Peer-Credentials. Der Dienst prüft die LAB-Gruppe und die aktive lokale
+logind-Sitzung. Ein von root verwaltetes Manifest ordnet die beiden
+Anschlüsse anhand von Profil und Hardware zu. Der Dialog kann weder
+beliebige Zieladapter und Pfade noch DNS-Werte und Befehle vorgeben.
+
+Zulässig sind manuelle IPv4- und IPv6-Adressen und gezielte Routen.
+Standardrouten und Überlappungen mit geschützten Schulnetzen werden
+abgelehnt. Bei der Inbetriebnahme die tatsächlichen Schul-, DNS- und
+Verwaltungsnetze im Manifest prüfen. Eine gezielte Route zu einem
+ungeschützten Ziel kann den betreffenden Verkehr ins LAB lenken.
+
+Der Dienst serialisiert Änderungen, Wiederherstellung und Login-Reset.
+Die Heilung hält den Schulanschluss und das Laborprofil verfügbar. Eine
+neue LAB-Anmeldung setzt die Übungswerte zurück. Schulverbindung,
+Gerätezuordnung, Rückweg und Übungsrouten auf dem Pilotclient prüfen.
+
+Siehe ../broker/, ../dialog/ und ../../docs/dashboard.md.

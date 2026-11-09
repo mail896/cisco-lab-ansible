@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=LAB Unterrichtszeit
+Exec=/usr/bin/unterrichtszeit
+TryExec=/usr/bin/unterrichtszeit
+OnlyShowIn=KDE;
+Terminal=false
+StartupNotify=false

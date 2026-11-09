@@ -1,0 +1,13 @@
+[Unit]
+Description=CISCO-LAB Debian maintenance pilot on LAB-08B
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RuntimeDirectory=cisco-lab-maintenance
+RuntimeDirectoryMode=0755
+WorkingDirectory=/usr/local/lib/cisco-lab-maintenance
+ExecStart=/usr/bin/python3 -B -m maintenance.pilot
+ExecStopPost=/usr/bin/python3 -B -m maintenance.pilot --cleanup
+TimeoutStartSec=infinity

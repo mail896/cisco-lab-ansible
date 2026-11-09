@@ -1,0 +1,27 @@
+# In /etc/nginx/conf.d/ ablegen. Adressen, DNS-Namen und Zertifikatspfade ersetzen.
+# Nur die Schulnetz-Schnittstelle binden. Geroutete Schulnetze bei Bedarf ergänzen.
+limit_req_zone $binary_remote_addr zone=lab_dashboard:1m rate=8r/s;
+
+server {
+    listen 192.0.2.100:443 ssl;
+    server_name lab.example.org;
+
+    ssl_certificate /etc/ssl/cisco-lab/fullchain.pem;
+    ssl_certificate_key /etc/ssl/cisco-lab/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    if ($host != $server_name) { return 421; }
+    allow 192.0.2.0/24;
+    deny all;
+
+    client_max_body_size 1k;
+    client_body_timeout 10s;
+    limit_req zone=lab_dashboard burst=24 nodelay;
+    limit_req_status 429;
+
+    location / {
+        proxy_pass http://127.0.0.1:8765;
+        proxy_set_header Host $server_name;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

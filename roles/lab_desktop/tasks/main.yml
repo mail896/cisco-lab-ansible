@@ -1,0 +1,191 @@
+---
+- name: LAB-Gruppe muss bereits durch IServ aufloesbar sein
+  ansible.builtin.getent:
+    database: group
+    key: "{{ lab_desktop_group }}"
+
+- name: Vorhandene Unterrichts-Starter pruefen, nicht stillschweigend ersetzen
+  ansible.builtin.stat:
+    path: "/usr/share/applications/{{ item }}"
+  loop:
+    - packettracer.desktop
+    - putty.desktop
+    - cisco-console.desktop
+    - wireshark-lab.desktop
+  register: lab_required_starters
+
+- name: Fehlende Voraussetzungen deutlich melden
+  ansible.builtin.assert:
+    that: item.stat.exists
+    fail_msg: "Starter {{ item.item }} fehlt. Erst Voraussetzungen im Testblock klaeren."
+  loop: "{{ lab_required_starters.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Angemeldete lokale Sitzungen vor Aenderungen ausschliessen
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -c
+      - |
+        import subprocess, sys
+        sessions = subprocess.check_output(['loginctl', 'list-sessions', '--no-legend'], text=True)
+        for line in sessions.splitlines():
+            sid = line.split()[0]
+            info = subprocess.check_output(['loginctl', 'show-session', sid, '-p', 'Type', '-p', 'Class', '-p', 'Remote'], text=True)
+            fields = dict(line.split('=', 1) for line in info.splitlines())
+            interactive = fields.get('Type') in ('x11', 'wayland') or (fields.get('Type') == 'tty' and fields.get('Remote') == 'no')
+            if interactive and fields.get('Class', '').startswith('user'):
+                print('Lokale Benutzersitzung vorhanden: ' + sid)
+                sys.exit(1)
+  changed_when: false
+  check_mode: false
+
+- name: Betroffene Systemdateien fuer den Rueckweg erfassen
+  ansible.builtin.set_fact:
+    lab_block01_files:
+      - /etc/cisco-lab/desktop.json
+      - /etc/xdg/plasma-workspace/env/20-lab-desktop.sh
+      - /usr/local/libexec/cisco-lab/prepare-desktop
+      - "{{ lab_desktop_wallpaper }}"
+      - /etc/cisco-lab/xdg/kdeglobals
+      - /etc/cisco-lab/xdg/ksmserverrc
+      - /etc/cisco-lab/xdg/plasma-welcomerc
+      - /etc/cisco-lab/xdg/autostart/lab-clock.desktop
+      - /etc/cisco-lab/xdg/autostart/lab-panel-favorites.desktop
+      - /etc/cisco-lab/xdg/autostart/lab-wallpaper.desktop
+      - /etc/cisco-lab/xdg/autostart/lab-kde-session-cleanup.desktop
+      - /usr/share/applications/u-zeiten.desktop
+      - /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/metadata.json
+      - /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/contents/defaults
+      - /usr/share/wallpapers/CiscoLab/metadata.json
+      - /usr/share/wallpapers/CiscoLab/contents/images/1920x1080.png
+
+- name: Systemdateien vor der ersten Aenderung sichern
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -c
+      - "{{ lookup('ansible.builtin.file', role_path + '/files/snapshot.py') }}"
+    stdin: "{{ lab_block01_files | to_json }}"
+  register: lab_block01_snapshot
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Vollstaendigen Stand dieses Bereinigungsblocks zur Sicherung kopieren
+  ansible.builtin.copy:
+    src: '{{ item.src }}'
+    dest: '{{ lab_block01_snapshot.stdout }}/source/{{ item.name }}'
+    owner: root
+    group: root
+    mode: preserve
+  loop:
+  - src: '{{ role_path }}/'
+    name: role/
+  - src: '{{ playbook_dir }}/block01-desktop.yml'
+    name: block01-desktop.yml
+  when:
+  - not ansible_check_mode
+  - not (lab_fresh_install | default(false) | bool)
+
+- name: Verzeichnisse bereitstellen
+  cisco_lab_files:
+    directories:
+    - path: /etc/cisco-lab
+      mode: '0755'
+    - path: /etc/cisco-lab/xdg
+      mode: '0755'
+    - path: /etc/cisco-lab/xdg/autostart
+      mode: '0755'
+    - path: /etc/xdg/plasma-workspace/env
+      mode: '0755'
+    - path: /usr/local/libexec/cisco-lab
+      mode: '0755'
+    - path: /usr/share/backgrounds
+      mode: '0755'
+    - path: /var/cache/cisco-lab
+      mode: '0755'
+
+- name: Aufgeloeste Konfiguration fuer diesen Lauf sichern
+  cisco_lab_files:
+    files:
+    - dest: '{{ lab_block01_snapshot.stdout }}/settings.json'
+      content: |
+        {{ {'group': lab_desktop_group, 'wallpaper': lab_desktop_wallpaper, 'launchers': lab_desktop_launchers, 'clock_url': lab_clock_url, 'clock_sha256': lab_clock_sha256} | to_nice_json }}
+      mode: '0600'
+  when: not ansible_check_mode
+
+- name: Unterrichtszeit 1.0.3 mit festgehaltener Pruefsumme herunterladen
+  ansible.builtin.get_url:
+    url: "{{ lab_clock_url }}"
+    dest: /var/cache/cisco-lab/unterrichtszeit_1.0.3_all.deb
+    checksum: "sha256:{{ lab_clock_sha256 }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Unterrichtszeit als Paket installieren
+  ansible.builtin.apt:
+    deb: /var/cache/cisco-lab/unterrichtszeit_1.0.3_all.deb
+    state: present
+  when: not ansible_check_mode
+
+- name: LAB-Dateien und Verzeichnisse gemeinsam bereitstellen
+  cisco_lab_files:
+    files:
+    - dest: /etc/cisco-lab/desktop.json
+      content: |
+        {{ {'group': lab_desktop_group, 'wallpaper': lab_desktop_wallpaper, 'launchers': lab_desktop_launchers} | to_nice_json }}
+      mode: '0644'
+    - src: prepare_desktop.py
+      dest: /usr/local/libexec/cisco-lab/prepare-desktop
+      mode: '0755'
+    - src: 20-lab-desktop.sh
+      dest: /etc/xdg/plasma-workspace/env/20-lab-desktop.sh
+      mode: '0644'
+    - src: kdeglobals
+      dest: /etc/cisco-lab/xdg/kdeglobals
+      mode: '0644'
+    - src: ksmserverrc
+      dest: /etc/cisco-lab/xdg/ksmserverrc
+      mode: '0644'
+    - src: plasma-welcomerc
+      dest: /etc/cisco-lab/xdg/plasma-welcomerc
+      mode: '0644'
+    - src: lab-clock.desktop
+      dest: /etc/cisco-lab/xdg/autostart/lab-clock.desktop
+      mode: '0644'
+    - src: '{{ lab_desktop_image_source | default(playbook_dir + ''/files/lab.png'') }}'
+      dest: '{{ lab_desktop_wallpaper }}'
+      mode: '0644'
+
+- name: LAB-Standardbild und symbolfreie Arbeitsfläche für neue Plasma-Profile bereitstellen
+  ansible.builtin.import_tasks: theme.yml
+
+- name: LAB-Desktopstarter gemeinsam bereitstellen
+  cisco_lab_files:
+    files:
+    - src: disabled.desktop
+      dest: /etc/cisco-lab/xdg/autostart/lab-panel-favorites.desktop
+      mode: '0644'
+    - src: disabled.desktop
+      dest: /etc/cisco-lab/xdg/autostart/lab-wallpaper.desktop
+      mode: '0644'
+    - src: disabled.desktop
+      dest: /etc/cisco-lab/xdg/autostart/lab-kde-session-cleanup.desktop
+      mode: '0644'
+
+- name: Alten U-Zeiten-Menueeintrag nach Sicherung entfernen
+  ansible.builtin.file:
+    path: /usr/share/applications/u-zeiten.desktop
+    state: absent
+  when:
+  - not (lab_fresh_install | default(false) | bool)
+
+- name: Rueckweg und erforderlichen Anmeldetest ausgeben
+  ansible.builtin.debug:
+    msg: >-
+      Keine Sitzung gestartet oder neu gestartet. Bei der naechsten LAB-Anmeldung
+      Erststart, Leiste, Sperre, Wallpaper und Uhr pruefen.
+      Sicherung: {{ lab_block01_snapshot.stdout | default('nur Check-Mode, keine Sicherung erstellt') }}.
+      Altes Uhr-Binary und alte Playbooks bleiben fuer den Rueckweg erhalten.

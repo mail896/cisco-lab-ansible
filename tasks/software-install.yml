@@ -1,0 +1,42 @@
+---
+- name: Explizites LAB-Ziel und Paketliste verlangen
+  ansible.builtin.assert:
+    that:
+      - ansible_play_hosts_all | length == 1
+      - inventory_hostname is match('^LAB-0[1-8][AB]$')
+      - lab_software_packages | length > 0
+      - lab_software_packages | length <= 50
+- name: Cache fuer eigene Paketdateien anlegen
+  ansible.builtin.file:
+    path: /var/cache/cisco-lab-software
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: lab_software_debs | default([]) | length > 0
+- name: Eigene Paketdateien effizient bereitstellen
+  ansible.builtin.copy:
+    src: "{{ lab_software_deb_directory }}/{{ item.sha256 }}.deb"
+    dest: "/var/cache/cisco-lab-software/{{ item.sha256 }}.deb"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ lab_software_debs | default([]) }}"
+  loop_control:
+    label: "{{ item.name }} {{ item.version }}"
+- name: Pakete installieren und Statusfenster im angemeldeten Desktop anzeigen
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -B
+      - -c
+      - |
+        import sys,types
+        _deb=types.ModuleType('deb_client')
+        exec({{ lookup('ansible.builtin.file', playbook_dir + '/dashboard/deb_client.py') | to_json }},_deb.__dict__)
+        sys.modules['deb_client']=_deb
+        {{ lookup('ansible.builtin.file', playbook_dir + '/dashboard/software_client.py') }}
+      - install
+    stdin: "{{ {'packages': lab_software_packages, 'host': inventory_hostname, 'expected': lab_software_expected | default(''), 'debs': lab_software_debs | default([])} | to_json }}"
+  register: lab_software_result
+  changed_when: (lab_software_result.stdout | from_json).changed | default(false)

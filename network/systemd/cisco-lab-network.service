@@ -1,0 +1,28 @@
+[Unit]
+Description=CISCO-LAB restricted network broker and single heal loop
+After=NetworkManager.service systemd-logind.service winbind.service
+Requires=NetworkManager.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -I /usr/local/lib/cisco-lab/network/broker/service.py
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=cisco-lab-network
+RuntimeDirectoryMode=0750
+StateDirectory=cisco-lab-network
+StateDirectoryMode=0700
+ProtectSystem=strict
+ReadWritePaths=/etc/NetworkManager/system-connections /var/backups/cisco-lab
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
+CapabilityBoundingSet=CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_CHOWN CAP_FOWNER
+
+[Install]
+WantedBy=multi-user.target

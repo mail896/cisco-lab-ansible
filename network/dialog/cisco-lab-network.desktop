@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Labornetz einstellen
+Comment=Manuelle Adressen und Routen fuer den USB-Laboradapter
+Exec=/usr/bin/python3 -I /usr/local/lib/cisco-lab/network/dialog/main.py
+Icon=network-wired
+Terminal=false
+Categories=Network;Settings;
+StartupNotify=false

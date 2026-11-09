@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Minicom
+GenericName=Cisco Console
+Comment=Serielle Cisco-Konsole mit Adapterauswahl
+Exec=/usr/local/bin/lab-serial-console minicom
+TryExec=/usr/bin/minicom
+Icon=network-wired
+Terminal=false
+Categories=Network;System;TerminalEmulator;
+StartupNotify=false

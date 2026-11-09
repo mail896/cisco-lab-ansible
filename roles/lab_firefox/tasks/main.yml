@@ -1,0 +1,89 @@
+---
+- name: Laufende Firefox-Prozesse vor der Migration ausschliessen
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -c
+      - |
+        from pathlib import Path
+        for process in Path('/proc').iterdir():
+            if not process.name.isdecimal():
+                continue
+            try:
+                name = (process / 'comm').read_text().strip()
+            except (FileNotFoundError, ProcessLookupError):
+                continue
+            if name in ('firefox','firefox-esr'):
+                raise SystemExit('Firefox laeuft noch; zuerst geordnet schliessen.')
+  changed_when: false
+  check_mode: false
+
+- name: Firefox-ESR muss vorhanden sein
+  ansible.builtin.stat:
+    path: /usr/lib/firefox-esr/firefox-esr
+  register: lab_firefox_binary
+
+- name: Vorhandene ESR-Installation verlangen
+  ansible.builtin.assert:
+    that: lab_firefox_binary.stat.exists
+    fail_msg: Firefox-ESR nicht am erwarteten Pfad vorhanden; keine Policy verteilen.
+
+- name: Vorhandene Zusatzvorgaben erhalten und Firefox-Schemanamen pruefen
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -B
+      - -c
+      - "{{ lookup('ansible.builtin.file', role_path + '/files/preflight.py') }}"
+    stdin: "{{ lookup('ansible.builtin.file', role_path + '/files/policies.json') }}"
+  register: lab_firefox_preflight
+  changed_when: false
+  check_mode: false
+
+- name: Geprüften tatsächlichen Policy-Pfad übernehmen
+  ansible.builtin.set_fact:
+    lab_firefox_policy: "{{ lab_firefox_preflight.stdout }}"
+
+- name: Vorhandene Policy vor Aenderung sichern
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -c
+      - "{{ lookup('ansible.builtin.file', role_path + '/files/snapshot.py') }}"
+    stdin: "{{ [lab_firefox_policy] | to_json }}"
+  register: lab_block04_snapshot
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Rollenstand und Einstieg sichern
+  ansible.builtin.copy:
+    src: '{{ item.src }}'
+    dest: '{{ lab_block04_snapshot.stdout }}/source/{{ item.name }}'
+    owner: root
+    group: root
+    mode: preserve
+  loop:
+  - src: '{{ role_path }}/'
+    name: role/
+  - src: '{{ playbook_dir }}/block04-firefox.yml'
+    name: block04-firefox.yml
+  when:
+  - not ansible_check_mode
+  - not (lab_fresh_install | default(false) | bool)
+
+- name: LAB-Dateien und Verzeichnisse gemeinsam bereitstellen
+  cisco_lab_files:
+    directories:
+    - path: '{{ lab_firefox_policy | dirname }}'
+      mode: '0755'
+    files:
+    - src: policies.json
+      dest: '{{ lab_firefox_policy }}'
+      mode: '0644'
+
+- name: Manuellen Policy-Test anzeigen
+  ansible.builtin.debug:
+    msg: >-
+      Policies ab naechstem Firefox-Start pruefen: about:policies, Startseite,
+      neuer Tab, Login-/Sync-Vorgaben und Download-Speicherort.
+      Sicherung: {{ lab_block04_snapshot.stdout | default('Check-Mode: keine Sicherung erstellt') }}.

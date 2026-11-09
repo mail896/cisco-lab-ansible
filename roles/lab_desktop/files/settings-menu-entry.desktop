@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=System Settings
+Exec=/usr/bin/false
+NoDisplay=true

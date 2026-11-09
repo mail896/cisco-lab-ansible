@@ -1,0 +1,10 @@
+[Daemon]
+Autolock[$i]=false
+LockOnResume[$i]=false
+
+[Greeter]
+WallpaperPlugin[$i]=org.kde.image
+
+[Greeter][Wallpaper][org.kde.image][General]
+Image[$i]=file:///usr/share/backgrounds/cisco-lab-login.jpg
+PreviewImage[$i]=file:///usr/share/backgrounds/cisco-lab-login.jpg

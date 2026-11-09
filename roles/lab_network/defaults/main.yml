@@ -1,0 +1,3 @@
+---
+# Must be supplied from a locally reviewed per-host manifest. Never guess identities.
+lab_network_manifest: {}

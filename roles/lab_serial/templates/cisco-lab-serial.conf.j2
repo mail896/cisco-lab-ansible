@@ -1,0 +1,2 @@
+# Shared locks. Use the verified numeric GID because tmpfiles runs before Winbind.
+d /run/lock/cisco-lab-serial 2770 root {{ ansible_facts.getent_group[lab_serial_group][1] }} -

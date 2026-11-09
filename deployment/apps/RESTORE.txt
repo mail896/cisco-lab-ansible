@@ -1,0 +1,136 @@
+OEFFENTLICHE BEISPIELANLEITUNG / PUBLIC EXAMPLE GUIDE
+Adressen, Domains und Konten sind Beispielwerte. Fuer eine echte
+Wiederherstellung die konkreten Werte aus der privaten Sicherung verwenden.
+
+CISCO-LAB AUF EINEM FRISCHEN APP-SERVER WIEDERHERSTELLEN
+
+Einstieg für eine neue Codex-Sitzung
+---------------------------------
+Projekt: https://github.com/mail896/cisco-lab-ansible
+Arbeitsordner: /home/lab-admin/cisco-lab
+Sicherung, diese Anleitung und den separat verwahrten Wiederherstellungsschlüssel
+bereitstellen. Den Schlüssel nur in einer privaten lokalen Datei verwenden,
+niemals in Chat, Git, Befehlsargumenten oder Protokollen ausgeben.
+Der Code IM ARCHIV beschreibt den gesicherten Betriebsstand. Das öffentliche
+Git dient als zusätzlicher Einstieg und kann einen anderen Versionsstand haben.
+Der gesicherte Funktionsstand ergibt sich aus dashboard/runtime.py, den
+tatsächlichen Konfigurationen und dieser Wiederanlaufanleitung.
+
+Enthalten
+---------
+- /opt/cisco-lab: LAB-Code, Inventar, Baselines und Wiederanlaufunterlagen.
+- /var/lib/cisco-lab/private: private Einstellungen einschließlich OIDC,
+  Client-/Teacher-Registrierungen, Hardwaredaten und lokaler Zusatzpakete.
+- /var/lib/cisco-lab/.ssh: eigene LAB-Dienstschlüssel und gepinnte Gegenstellen.
+- /var/lib/cisco-lab/Bilder/CISCO-LAB: Bildbibliothek.
+- .local/state/cisco-lab-dashboard: gespeicherte Aufträge, Freigaben, Wartungs-
+  und Anmeldeverläufe, interner Dienstzugang sowie Backup-Metadaten.
+- Genau vier eigene Systemdateien: cisco-lab-dashboard.service,
+  cisco-lab-controller.service und .timer unter /etc/systemd/system sowie
+  /etc/apache2/cisco-lab.conf.
+- Neue Archive enthalten zusätzlich restore-manifest.json mit Betriebssystem,
+  Architektur, Pythonstand, Pfaden und benötigten Paketen. Sein Archivpfad steht
+  im zugehörigen Backup-Datensatz unter restore_manifest_member.
+
+Separat erforderlich / neu erzeugbar
+----------------------------------
+Die Sicherung ist ein LAB-Konfigurationsbackup, kein Image des gesamten Servers.
+Benötigt werden ein unterstütztes Linux, Administratorzugang zum Ersatzserver,
+der externe Wiederherstellungsschlüssel sowie Netzwerk-/DNS-/HTTPS-Einrichtung.
+Andere APP-Projekte, deren Datenbanken, globale Firewall, gemeinsamer HTTPS-VHost,
+Zertifikate und private HTTPS-Schlüssel sind nicht enthalten. Der öffentliche
+Git-Link allein enthält weder private Einstellungen noch LAB-Schlüssel.
+Python-Venv und Ansible-Collections werden aus deployment/apps/requirements.lock
+und collections.yml neu erstellt; dafür ist Paket-/Internetzugang erforderlich.
+Browser-Sitzungen und IServ-Token liegen im RAM und werden nicht wiederhergestellt.
+Die großen Sicherungsarchive selbst werden nicht rekursiv mitgesichert.
+
+1. Ersatzserver vorbereiten, Automatisierung zunächst ausgeschaltet lassen
+-----------------------------------------------------------------------
+Empfohlener Ausgangspunkt ist Debian 13 mit Python 3.13 und der im Manifest
+genannten Architektur. Abweichungen vorab anhand der gebundenen Abhängigkeiten
+und privaten Clientpakete prüfen. Als Administrator nur dort die benötigten
+Pakete bereitstellen: python3, python3-venv, python3-pip, openssh-client, gnupg,
+tar, apache2, ca-certificates und bei Bedarf git. Andere Projekte ausnehmen.
+Noch keinen LAB-Timer oder Clientauftrag starten.
+
+Die bisherige LAN-Adresse ist 203.0.113.200, Hostname apps, Webadresse
+https://lab-app.example.org/cisco-lab. Nur wenn der alte Host abgeschaltet ist,
+darf ein Ersatz diese Adresse übernehmen. Die LAB-Clientzugänge und der
+beschränkte Mac-Empfänger sind auf die APP-Quelladresse begrenzt. Bei anderer
+Adresse müssen diese Zulassungen gezielt vom Betreiber angepasst werden.
+ConditionHost in beiden Dienstvorlagen und maintenance/controller.py beachten.
+Die FQDN-, HTTPS- und OIDC-Callback-Konfiguration zusammen prüfen. Bei gleicher
+Webadresse kann die gesicherte OIDC-Konfiguration weiterverwendet werden; bei
+anderer Webadresse muss der Betreiber den IServ-Client passend ändern.
+
+2. Archiv beschaffen und isoliert prüfen
+---------------------------------------
+Quelle: APP /var/lib/cisco-lab/backup_data oder Mac /Volumes/Repo/cisco-lab.
+Bei Totalverlust von APP das Archiv am Mac mit dem eigenen Administratorzugang
+beschaffen; dafür darf kein bereits funktionierender APP-Dienst vorausgesetzt
+werden. Ein ZIP-Download enthält das unveränderte .tar.gz.gpg samt .sha256 und
+dieser Anleitung. ZIP zuerst ausschließlich in einen neuen privaten Ordner
+entpacken. Die enthaltene GPG-Datei bleibt verschlüsselt.
+
+SHA-256 vor dem Entschlüsseln gegen die mitgelieferte Prüfsumme vergleichen.
+GPG mit --batch --no-tty --pinentry-mode loopback --passphrase-file DATEIPFAD
+verwenden. Eine neue private temporäre GNUPGHOME verwenden, keine fremden
+Benutzerschlüsselverzeichnisse. Ausgabe ist zunächst nur eine private .tar.gz.
+Mit Python 3.13 tarfile und filter='data' ausschließlich in eine NEUE private
+Testablage extrahieren, nie direkt nach /. Pfade, Typen und Links vor Übernahme
+prüfen. deployment/apps/verify_backup.py dokumentiert den bestehenden
+Dateiabgleich; sein automatischer Modus benötigt bereits eine laufende Runtime
+und ersetzt deshalb nicht diesen ersten Schritt auf dem frischen Server.
+
+3. Eigenes Konto, Code und Daten übernehmen
+-----------------------------------------
+Konto/Gruppe cisco-lab mit Home /var/lib/cisco-lab, ohne Login und ohne sudo
+anlegen. Code aus dem isolierten Archiv nach /opt/cisco-lab, root:root;
+Verzeichnisse 0755, reguläre Dateien grundsätzlich 0644, notwendige Programm-
+Ausführungsbits anhand der Vorlagen erhalten. Privaten Zustand nur unter
+/var/lib/cisco-lab dem neuen Dienstkonto zuordnen und auf 0700/0600 schützen.
+Alte numerische UIDs nicht blind übernehmen. Keine Besitzänderungen außerhalb
+dieser zwei LAB-Wurzeln. /opt/cisco-lab/local-private gezielt neu als Link auf
+/var/lib/cisco-lab/private anlegen; andere Links nicht ungeprüft übernehmen.
+Den separat verwahrten Schlüssel unverändert als
+/var/lib/cisco-lab/.local/state/cisco-lab-dashboard/backup/recovery-key einsetzen,
+Eigentümer cisco-lab, Modus 0600. Nicht durch einen neuen Schlüssel ersetzen.
+
+4. Lokale Abhängigkeiten und eigene Systemdateien einrichten
+----------------------------------------------------------
+Venv unter /opt/cisco-lab/.venv neu erzeugen und requirements.lock installieren.
+Ansible-Collections ausschließlich unter /opt/cisco-lab/collections anhand der
+collections.yml bereitstellen. Keine globale Python-Installation verändern.
+Die vier eigenen Systemdateien anhand der gesicherten Versionen und der
+aktuellen Hostnamen/Pfade prüfen und rootgeschützt installieren. Das Apache-
+Snippet separat gegenlesen und ausschließlich in den passenden HTTPS-VHost
+einbinden. Gemeinsamen VHost und andere Projekte nicht ersetzen. Der zugehörige
+TLS-Schlüssel/das Zertifikat und dessen Erneuerung müssen separat bereitstehen.
+Konfigurationen mit systemd-analyze verify bzw. apache2ctl configtest prüfen.
+Nach daemon-reload zuerst nur cisco-lab-dashboard.service starten.
+
+5. Prüfen, dann kontrolliert freigeben
+------------------------------------
+Loopbackdienst, HTTPS, erlaubtes Schulnetz/VPN, eigene Dateien und IServ Login
+prüfen. /var/lib/cisco-lab/private/oidc.json und auth/automation-token.json im
+LAB-Zustand müssen privat dem Dienstkonto gehören. local_login_enabled=false
+beibehalten; keine alte Browser-Passwortdatei erzeugen. Das konfigurierte Administratorkonto erhält Verwaltungsrechte;
+Kollegium darf lesen und Sammelaktionen ausführen. Andere Konten werden
+bei übermittelter verifizierter Identität namentlich abgewiesen.
+Die gespeicherten Clientidentitäten mit EINEM tatsächlich vorhandenen Pilotziel
+vergleichen; neu installierte oder unbekannte Hostschlüssel nicht aus einem
+alten Archiv als aktuell übernehmen. Den Mac-Empfänger lesend prüfen und nach
+Abnahme eine neue Sicherung erstellen. Erst danach Controller-Timer aktivieren,
+wenn kein zweiter Controller mehr läuft.
+Teacher-Freigabe private/teacher-maintenance.json zunächst auf enabled=false
+setzen. Nach Ziel-/Hostschlüsselprüfung und neuem vollständigem S5-/Wartungspilot
+über maintenance.teacher_controller --activate-after-pilot erneut freigeben.
+Kein Standby-/Hibernate-Test. Die Sicherung allein aktiviert keinen Zeitplan.
+
+Nachweisgrenze
+-------------
+Der bisherige Restore-Test belegt das Entschlüsseln, isolierte Extrahieren und
+den Abgleich der LAB-Dateien, einschließlich einer vom Mac zurückgelesenen Kopie.
+Ein vollständiger Aufbau eines leeren Ersatzservers wurde noch nicht praktisch
+abgenommen. Diese Unterscheidung auch einer neuen Codex-Sitzung mitteilen.

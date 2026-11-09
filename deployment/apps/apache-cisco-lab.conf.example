@@ -1,0 +1,10 @@
+# Include after the LAB-08A pilot and backup checks succeed.
+# This snippet belongs inside the existing lab-app.example.org :443 vhost.
+RedirectMatch 308 ^/cisco-lab$ /cisco-lab/
+ProxyPass /cisco-lab/ http://127.0.0.1:8765/cisco-lab/
+ProxyPassReverse /cisco-lab/ http://127.0.0.1:8765/cisco-lab/
+<LocationMatch "^/cisco-lab(?:/|$)">
+    # Public entry point; the LAB application enforces IServ login and roles.
+    Require all granted
+    RequestHeader set X-Forwarded-Proto "https"
+</LocationMatch>

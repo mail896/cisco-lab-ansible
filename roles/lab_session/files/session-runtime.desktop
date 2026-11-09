@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=LAB Sitzungsvorgaben
+Exec=/usr/local/libexec/cisco-lab/session-runtime
+OnlyShowIn=KDE;
+Terminal=false
+StartupNotify=false

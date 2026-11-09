@@ -1,0 +1,53 @@
+---
+- name: LAB-Dateien und Verzeichnisse gemeinsam bereitstellen
+  cisco_lab_files:
+    directories:
+    - path: /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/contents
+      mode: '0755'
+    - path: /usr/share/wallpapers/CiscoLab/contents/images
+      mode: '0755'
+    files:
+    - dest: /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/metadata.json
+      mode: '0644'
+      content: '{{ {''KPlugin'': {''Id'': ''de.bbs-einbeck.cisco-lab'', ''Name'': ''CISCO-LAB''}} | to_nice_json }}'
+    - dest: /usr/share/wallpapers/CiscoLab/metadata.json
+      mode: '0644'
+      content: '{{ {''KPlugin'': {''Id'': ''CiscoLab'', ''Name'': ''CISCO-LAB''}} | to_nice_json }}'
+    - dest: /usr/share/plasma/look-and-feel/de.bbs-einbeck.cisco-lab/contents/defaults
+      mode: '0644'
+      content: |
+        [kdeglobals][KDE]
+        widgetStyle=Breeze
+
+        [kdeglobals][General]
+        ColorScheme=BreezeLight
+
+        [kdeglobals][Icons]
+        Theme=breeze
+
+        [plasmarc][Theme]
+        name=breeze-dark
+
+        [Desktop][org.kde.plasma.desktop]
+        Containment=org.kde.desktopcontainment
+
+        [Wallpaper]
+        Image=CiscoLab
+
+        [kcminputrc][Mouse]
+        cursorTheme=breeze_cursors
+
+        [kwinrc][org.kde.kdecoration2]
+        library=org.kde.breeze
+        theme=Breeze
+
+        [KSplash]
+        Theme=org.kde.Breeze
+
+- name: KDE-Bildpaket mit dem verwalteten Desktopbild verknüpfen
+  ansible.builtin.file:
+    src: "{{ lab_desktop_wallpaper | default('/usr/share/backgrounds/lab.png') }}"
+    dest: /usr/share/wallpapers/CiscoLab/contents/images/1920x1080.png
+    state: link
+    owner: root
+    group: root

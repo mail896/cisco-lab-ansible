@@ -1,0 +1,14 @@
+[Unit]
+Description=CISCO-LAB restricted Wireshark capture socket
+
+[Socket]
+ListenStream=/run/cisco-lab-capture.sock
+Accept=yes
+SocketMode=0660
+# The socket starts root-only. Deployments use a numeric GID for chown.
+ExecStartPost=/usr/bin/chown --no-dereference root:cisco.lab /run/cisco-lab-capture.sock
+MaxConnections=1
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

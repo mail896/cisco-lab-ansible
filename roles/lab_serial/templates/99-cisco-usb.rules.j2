@@ -1,0 +1,4 @@
+# Managed by lab_serial. GID resolved from IServ/NSS during deployment.
+# USB serial adapters only, including native USB console ports (ttyACM).
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", KERNEL=="ttyUSB[0-9]*", GROUP:="{{ ansible_facts.getent_group[lab_serial_group][1] }}", MODE:="0660"
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", KERNEL=="ttyACM[0-9]*", GROUP:="{{ ansible_facts.getent_group[lab_serial_group][1] }}", MODE:="0660"

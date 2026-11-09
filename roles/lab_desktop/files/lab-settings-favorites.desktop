@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=LAB-Favoriten bereinigen
+Exec=/usr/bin/python3 -IB /usr/local/libexec/cisco-lab/settings-favorites
+OnlyShowIn=KDE;
+NoDisplay=true
+X-KDE-autostart-phase=2

@@ -1,0 +1,44 @@
+--- a/source3/winbindd/idmap_ad.c
++++ b/source3/winbindd/idmap_ad.c
+@@ -823,6 +823,13 @@
+ 	NTSTATUS status;
+ 
+ 	status = idmap_ad_query_user(domain, info);
++	/* A closed idle socket is not evidence that the DC is unavailable.
++	 * Retry once with a new LDAP context before triggering DC failover.
++	 * Keep the existing timeout and final failure handling. */
++	if (NT_STATUS_EQUAL(status, status_server_down)) {
++		TALLOC_FREE(domain->private_data);
++		status = idmap_ad_query_user(domain, info);
++	}
+ 
+ 	if (NT_STATUS_EQUAL(status, status_server_down) ||
+ 	    NT_STATUS_EQUAL(status, status_timeout))
+@@ -1261,6 +1268,13 @@
+ 	NTSTATUS status;
+ 
+ 	status = idmap_ad_unixids_to_sids(dom, ids);
++	/* A closed idle socket is not evidence that the DC is unavailable.
++	 * Retry once with a new LDAP context before triggering DC failover.
++	 * Keep the existing timeout and final failure handling. */
++	if (NT_STATUS_EQUAL(status, status_server_down)) {
++		TALLOC_FREE(dom->private_data);
++		status = idmap_ad_unixids_to_sids(dom, ids);
++	}
+ 
+ 	if (NT_STATUS_EQUAL(status, status_server_down) ||
+ 	    NT_STATUS_EQUAL(status, status_timeout))
+@@ -1282,6 +1296,13 @@
+ 	NTSTATUS status;
+ 
+ 	status = idmap_ad_sids_to_unixids(dom, ids);
++	/* A closed idle socket is not evidence that the DC is unavailable.
++	 * Retry once with a new LDAP context before triggering DC failover.
++	 * Keep the existing timeout and final failure handling. */
++	if (NT_STATUS_EQUAL(status, status_server_down)) {
++		TALLOC_FREE(dom->private_data);
++		status = idmap_ad_sids_to_unixids(dom, ids);
++	}
+ 
+ 	if (NT_STATUS_EQUAL(status, status_server_down) ||
+ 	    NT_STATUS_EQUAL(status, status_timeout))

@@ -1,0 +1,78 @@
+---
+- name: Geprüfte LAB-Rolle auf genau einem Testclient
+  hosts: cisco_lab
+  become: true
+  gather_facts: false
+  vars:
+    dashboard_pilot_addresses:
+      LAB-08A: 203.0.113.15
+      LAB-08B: 203.0.113.16
+  pre_tasks:
+    - name: Testziel, IP und Rolle vor dem Verbindungsaufbau abgleichen
+      tags: always
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts_all == [dashboard_host]
+          - inventory_hostname == dashboard_host
+          - inventory_hostname in dashboard_pilot_addresses
+          - ansible_host == dashboard_pilot_addresses[inventory_hostname]
+          - ansible_host == dashboard_address
+          - dashboard_role in ['lab_firefox', 'lab_serial', 'lab_session', 'lab_appearance']
+
+    - name: Geräteidentität, freie lokale Sitzung und laufende Wartung prüfen
+      tags: always
+      ansible.builtin.raw: |
+        /usr/bin/python3 -IB - {{ inventory_hostname | quote }} <<'PY'
+        import socket
+        import subprocess
+        import sys
+
+        if socket.gethostname() != sys.argv[1]:
+            raise SystemExit('Hostname stimmt nicht mit dem Inventar überein.')
+        sessions = subprocess.check_output(['loginctl', 'list-sessions', '--no-legend'], text=True)
+        for line in sessions.splitlines():
+            info = subprocess.check_output(['loginctl', 'show-session', line.split()[0],
+                                            '-p', 'Class', '-p', 'Service', '-p', 'Seat', '-p', 'Type'], text=True)
+            fields = dict(row.split('=', 1) for row in info.splitlines() if '=' in row)
+            if not fields.get('Class'):
+                raise SystemExit('Sitzungsstatus nicht eindeutig.')
+            if fields['Class'].startswith('user') and (
+                fields.get('Seat') or fields.get('Type') in ('x11', 'wayland')
+                or fields.get('Service') != 'sshd'
+            ):
+                raise SystemExit('Lokale Benutzersitzung vorhanden. Erst regulär abmelden.')
+        mounts = subprocess.check_output(['findmnt', '-n', '-o', 'TARGET'], text=True)
+        if any(target.startswith('/var/lib/iserv/client/home/') for target in mounts.splitlines()):
+            raise SystemExit('IServ-Home ist noch eingebunden.')
+        for unit in ('cisco-lab-maintenance.service', 'apt-daily.service', 'apt-daily-upgrade.service'):
+            state = subprocess.check_output(['systemctl', 'show', '-p', 'ActiveState',
+                                             '--value', unit], text=True).strip()
+            if state not in ('inactive', 'failed'):
+                raise SystemExit(f'{unit} läuft oder der Status ist nicht eindeutig.')
+        PY
+      changed_when: false
+
+  tasks:
+    - name: Firefox-Richtlinien bereitstellen
+      ansible.builtin.import_role:
+        name: lab_firefox
+      tags: firefox
+      when: dashboard_role == 'lab_firefox'
+
+    - name: PuTTY und Minicom bereitstellen
+      ansible.builtin.import_role:
+        name: lab_serial
+      tags: serial
+      when: dashboard_role == 'lab_serial'
+
+    - name: KDE-Sitzung bereitstellen
+      ansible.builtin.import_role:
+        name: lab_session
+      tags: session
+      when: dashboard_role == 'lab_session'
+
+
+    - name: Desktop- und Sperrbild bereitstellen
+      ansible.builtin.import_tasks: dashboard/appearance-tasks.yml
+      tags: appearance
+      when: dashboard_role == 'lab_appearance'
