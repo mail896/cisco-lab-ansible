@@ -12,6 +12,7 @@ from dashboard.deploy import JOBS, LAB_TARGETS, ROOT, close_control_socket
 from dashboard.software import Software, package_revision
 from dashboard.software_client import packages
 from maintenance.reservations import reserved
+from maintenance.preview import CLIENT_WORKERS
 
 
 # Each module points to the existing command builder; no copied YAML or browser
@@ -45,7 +46,8 @@ class PlaybookGroups:
 
     def state(self):
         return dict(groups=self.groups(), modules=list(MODULES.values()), profiles=self.software.profiles(),
-                    hosts=sorted(self.software.enrolled()), runs=self.records(), busy=self.deployments.lock.locked())
+                    hosts=sorted(self.software.enrolled()), runs=self.records(), busy=self.deployments.lock.locked(),
+                    parallelism=CLIENT_WORKERS)
 
     def resolve(self, steps):
         if (not isinstance(steps, list) or not 1 <= len(steps) <= 25
@@ -160,7 +162,7 @@ class PlaybookGroups:
 
     def execute(self, run):
         try:
-            with ThreadPoolExecutor(max_workers=4) as workers:
+            with ThreadPoolExecutor(max_workers=CLIENT_WORKERS) as workers:
                 pending = {workers.submit(self.on_host, host, run): host for host in run['targets']}
                 for future in as_completed(pending):
                     host = pending[future]

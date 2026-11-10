@@ -15,7 +15,7 @@ from dashboard.admission import (Bootstrap, VEYON_KEY, veyon_available,
                                  read_settings, validate_hardware)
 from dashboard.deploy import ADMISSIONS, JOBS, LAB_TARGETS, ROOT, Deployments, close_control_socket, known_hosts_for
 from dashboard.runtime import ansible_tool
-from maintenance.preview import BERLIN
+from maintenance.preview import BERLIN, CLIENT_WORKERS
 from maintenance.reservations import reserved
 
 ENTRIES = {key:{'label':label,'source':entry,'kind':'pilot'} for key,(label,_,entry) in JOBS.items()}
@@ -25,7 +25,7 @@ ENTRIES.update(
     winbind={'label':'Winbind-Reconnect-Fix','source':'winbind-reconnect.yml','kind':'local'},
     maintenance={'label':'APT-Wartungspilot','source':'maintenance/pilot.py','kind':'maintenance'},
 )
-FRESH_WORKERS = 4
+FRESH_WORKERS = CLIENT_WORKERS
 IDLE_WARNING = 5 * 60
 ACTIVE = {'queued', 'running'}
 

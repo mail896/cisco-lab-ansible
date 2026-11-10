@@ -19,7 +19,7 @@ function groupButtons() {
   el('group-save').disabled = !admin || groupPending || !groupSteps.length || !el('group-name').value.trim();
   el('group-delete').disabled = !admin || groupPending || !el('group-choice').value;
   el('group-start').disabled = !admin || groupPending || groupState?.busy || groupDirty || !el('group-choice').value || !groupTargets.size;
-  el('group-count').textContent = groupTargets.size + ' Rechner ausgewählt · maximal 4 gleichzeitig';
+  el('group-count').textContent = groupTargets.size + ' Rechner ausgewählt · maximal ' + (groupState?.parallelism || 16) + ' gleichzeitig';
   el('group-all').disabled = el('group-none').disabled = !admin || groupPending || groupState?.busy;
 }
 function groupChanged() { groupDirty = true; groupButtons(); }

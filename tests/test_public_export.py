@@ -27,7 +27,11 @@ class PublicExportTests(unittest.TestCase):
                      '.checks/example.json', '../README.md', '/README.md',
                      'deployment/apps/prepare_oidc.py', 'deployment/apps/retire_local_login.py',
                      'deployment/apps/build_runtime.py', 'deployment/apps/check_teacher_setup.py',
-                     'deployment/apps/import_packettracer.py', 'deployment/apps/enable_apache_route.py'):
+                     'deployment/apps/import_packettracer.py', 'deployment/apps/enable_apache_route.py',
+                     'deployment/teacher/backup.py', 'deployment/teacher/backup_mac_receiver.py',
+                     'deployment/teacher/backup_window.py', 'deployment/teacher/backup_window.sh',
+                     'deployment/teacher/Teacher-Sicherung.desktop', 'deployment/teacher/system-backup.service',
+                     'deployment/teacher/RESTORE-system.txt', 'tests/test_teacher_system_backup.py'):
             with self.subTest(path=name): self.assertFalse(public_path(name))
         self.assertTrue(public_path('dashboard/intake.py'))
         self.assertTrue(public_path('action_plugins/cisco_lab_files.py'))

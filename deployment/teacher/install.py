@@ -148,6 +148,14 @@ UMask=0077
 TimeoutStartSec=infinity
 '''
     key = 'restrict,from="203.0.113.200",command="/usr/local/sbin/cisco-lab-teacher-ssh" ' + public_key + '\n'
+    diagnostic_key = STATE / 'diagnostic-key.pub'
+    if diagnostic_key.exists() or diagnostic_key.is_symlink():
+        regular(diagnostic_key)
+        value = diagnostic_key.read_text().strip()
+        if not re.fullmatch(r'ssh-ed25519 [A-Za-z0-9+/]+={0,2}', value):
+            raise ValueError('Ungültiger Teacher-Diagnoseschlüssel.')
+        key += ('restrict,from="203.0.113.200",command="/usr/local/sbin/cisco-lab-teacher-diagnostics-ssh" '
+                + value + '\n')
     return {
         LIBRARY / 'receiver.py': (payload['receiver'].encode(), 0o644),
         LIBRARY / 'software_client.py': (payload['software_client'].encode(), 0o644),

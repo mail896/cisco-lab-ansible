@@ -183,7 +183,9 @@ window.addEventListener('pageshow', event => {
 });
 
 async function request(path, payload) {
-  if (payload !== undefined && labRole === 'reader' && !['/logout', '/api/room/start'].includes(path)) {
+  if (payload !== undefined && labRole === 'reader' && !['/logout', '/api/room/start',
+    '/api/exercises/create', '/api/exercises/preview', '/api/exercises/text', '/api/exercises/save', '/api/exercises/families',
+    '/api/exercises/template', '/api/exercises/delete', '/api/exercises/delete-all'].includes(path)) {
     throw new Error('Du hast Lesezugriff mit Sammelaktionen. Diese Verwaltungsaktion ist dem Administrator vorbehalten.');
   }
   const response = await fetch(basePath + path, payload === undefined ? {} : {

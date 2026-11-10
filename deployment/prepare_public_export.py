@@ -17,6 +17,7 @@ PUBLIC_TREES = {'.github', 'dashboard', 'deployment', 'maintenance', 'network', 
                 'action_plugins', 'library'}
 PUBLIC_ROOTS = {'.gitignore', 'README.md', 'README.en.md', 'baseline-client.py', 'inventory.example.ini'}
 PUBLIC_DOCS = {'dashboard.md', 'dashboard.en.md', 'wartung-vorschau.md', 'wartung-vorschau.en.md',
+               'aufgabengenerator.md', 'aufgabengenerator.en.md',
                'index.html', 'en.html', 'site.css', '.nojekyll', 'labornetz.svg', 'labornetz.en.svg'}
 PRIVATE_PARTS = {'.git', '.migration', '.venv', '.checks', 'local-private', '__pycache__',
                  '.ssh', 'backup_data', 'node_modules'}
@@ -26,6 +27,10 @@ PRIVATE_NAMES = {'AGENTS.md', 'HANDOVER.txt', 'Project.State.md', 'PLAN.txt', 'r
 LOCAL_ONLY_DEPLOYMENT = {'deployment/apps/' + name for name in (
     'prepare_oidc.py', 'retire_local_login.py', 'build_runtime.py',
     'check_teacher_setup.py', 'import_packettracer.py', 'enable_apache_route.py')}
+LOCAL_ONLY_DEPLOYMENT.update('deployment/teacher/' + name for name in (
+    'backup.py', 'backup_mac_receiver.py', 'backup_window.py', 'backup_window.sh',
+    'Teacher-Sicherung.desktop', 'system-backup.service', 'RESTORE-system.txt'))
+LOCAL_ONLY_DEPLOYMENT.add('tests/test_teacher_system_backup.py')
 SECRETS = (
     re.compile(rb'-----BEGIN (?:OPENSSH |RSA |EC |DSA |ENCRYPTED )?PRIVATE KEY-----'),
     re.compile(rb'\$(?:6|y|2[aby])\$[A-Za-z0-9./$]{25,}'),

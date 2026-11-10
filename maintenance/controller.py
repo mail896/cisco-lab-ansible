@@ -18,7 +18,7 @@ from dashboard.admission import read_settings, write_private
 from dashboard.deploy import LAB_TARGETS, ROOT
 from dashboard.operation_lock import OperationLock
 from dashboard.room import RoomActions
-from maintenance.preview import BERLIN, start_allowed
+from maintenance.preview import BERLIN, CLIENT_WORKERS, start_allowed
 
 CONFIG = ROOT/'local-private/maintenance-targets.json'
 PIN_DIRECTORY = ROOT/'local-private/maintenance-pins'
@@ -371,7 +371,7 @@ def execute_locked(enrolled, manual):
     try:
         save()
         route=RoomActions.wake_route()
-        with ThreadPoolExecutor(max_workers=4) as workers:
+        with ThreadPoolExecutor(max_workers=CLIENT_WORKERS) as workers:
             jobs={workers.submit(on_host,host,data,route,manual):host for host,data in enrolled.items()}
             for future in as_completed(jobs):
                 host=jobs[future]

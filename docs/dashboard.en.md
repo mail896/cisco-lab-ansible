@@ -6,9 +6,9 @@ A central web application for a Debian/KDE networking classroom with IServ: enro
 
 The classroom contains 16 student PCs in eight two-person teams and a teacher PC. Each client's internal NIC connects to the school network; a USB Ethernet adapter connects to the separate training network with real switches and routers. The APP console runs as its own service on a separate server.
 
-APP version **2026.11.09**. Both guides retain German navigation and button labels so they match the running application.
+APP version **2026.11.10**. Both guides retain German navigation and button labels so they match the running application.
 
-[Room overview](#overview) · [IServ and roles](#login) · [New installation](#installation) · [Student clients](#clients) · [Bulk actions](#room) · [Teaching view](#classroom) · [Repository software](#software) · [Playbook groups](#playbooks) · [Pilot and room rollout](#pilots) · [Maintenance](#maintenance) · [Desktop images](#images) · [Backup and recovery](#backup)
+[Room overview](#overview) · [IServ and roles](#login) · [New installation](#installation) · [Student clients](#clients) · [Bulk actions](#room) · [Teaching view](#classroom) · [Exercise generator](#exercises) · [Repository software](#software) · [Playbook groups](#playbooks) · [Pilot and room rollout](#pilots) · [Maintenance](#maintenance) · [Desktop images](#images) · [Backup and recovery](#backup)
 
 <a id="overview"></a>
 
@@ -30,7 +30,7 @@ Summary cards link to relevant pages. The LAB logo reloads the overview. Reachab
 
 **One sign-in with explicit permissions**
 
-The landing page opens school authentication through “IServ Login”. The designated administrator manages devices, software, maintenance and backups. Members of the staff group Kollegium can read the permitted views and execute all bulk actions.
+The landing page opens school authentication through “IServ Login”. The designated administrator manages devices, software, maintenance and backups. Members of the staff group Kollegium can read permitted views, execute all bulk actions and use the exercise generator with their own templates.
 
 Accounts outside the staff group receive a clear rejection. Successful and denied sign-ins are logged with the identity verified by IServ, when available. Only the administrator can view the sign-in log.
 
@@ -99,6 +99,20 @@ The teaching view uses the same room diagram as the overview, bulk actions and s
 USB and session checks run approximately once a minute while the page is visible, using bounded parallel requests. Ping status uses the shared reachability cache. Search and “Live pausieren” help focus a discussion. This view reads state; it does not configure student networks.
 
 ![Teaching view](media/dashboard-classroom.jpg)
+
+<a id="exercises"></a>
+
+## Exercise generator
+
+Unterricht → Aufgabengenerator creates exercises for two LANs, two routers and two switches. The preview, task text, address plan and worked solution belong to the same exercise snapshot. Generating exercises and exporting files does not change any device.
+
+IPv4/IPv6 routing exercises for up to eight teams, editable templates, student PDFs and worked-solution ZIPs. Existing networks survive protocol selection changes; only explicit saving adds a preview to the collection.
+
+[Complete exercise generator guide](aufgabengenerator.en.md)
+
+![Exercise settings, protocols and team variants in the running APP](media/exercise-overview.jpg)
+
+![Editable Wireshark tasks and separate solution notes](media/exercise-wireshark.jpg)
 
 <a id="software"></a>
 
@@ -224,6 +238,6 @@ Packet Tracer is proprietary additional software and must be supplied separately
 
 Screenshots show the running German application in a controlled administrative view. Names of graphical-session users are hidden for publication. The English documentation describes the same features; the application itself is in German.
 
-Visible timestamps and device states are snapshots, not guarantees of future reachability. The staff view does not include administrative write actions beyond the permitted bulk actions.
+Visible timestamps and device states are snapshots, not guarantees of future reachability. Teachers may also generate and export exercises and manage their own templates and collection entries. Other administrative write actions remain restricted.
 
 [README](../README.en.md) · [Pages](https://mail896.github.io/cisco-lab-ansible/en.html)

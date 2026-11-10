@@ -121,7 +121,7 @@ class QueueTests(unittest.TestCase):
             self.assertLess(monotonic(), deadline)
             sleep(.01)
 
-    def test_four_workers_and_queued_stop_preserves_admission(self):
+    def test_worker_capacity_and_queued_stop_preserves_admission(self):
         hosts = ('LAB-01A', 'LAB-01B', 'LAB-02A', 'LAB-02B', 'LAB-03A')
         for host in hosts:
             self.prepare(host)
@@ -138,7 +138,9 @@ class QueueTests(unittest.TestCase):
                 release.wait(5)
             return 0
 
-        with patch.object(self.queue, 'run_playbook', side_effect=playbook):
+        # Keep one target queued without starting sixteen mock installations.
+        with patch.object(provision, 'FRESH_WORKERS', 4), \
+                patch.object(self.queue, 'run_playbook', side_effect=playbook):
             try:
                 result = self.queue.fresh_start([dict(host=host, veyon=host == hosts[0]) for host in hosts], True)
                 self.until(lambda: len(started) == 4)

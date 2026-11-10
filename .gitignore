@@ -15,3 +15,13 @@ oidc/
 __pycache__/
 *.pyc
 local-private/
+
+# Local Teacher system backup tools (kept under local-private/teacher-backup)
+/deployment/teacher/backup.py
+/deployment/teacher/backup_mac_receiver.py
+/deployment/teacher/backup_window.py
+/deployment/teacher/backup_window.sh
+/deployment/teacher/Teacher-Sicherung.desktop
+/deployment/teacher/system-backup.service
+/deployment/teacher/RESTORE-system.txt
+/tests/test_teacher_system_backup.py
