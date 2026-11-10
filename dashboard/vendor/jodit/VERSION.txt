@@ -1,0 +1,2 @@
+Jodit 4.18.10 · MIT · https://github.com/xdan/jodit
+Lokal eingebundene Browserdateien; keine CDN-Abfragen.

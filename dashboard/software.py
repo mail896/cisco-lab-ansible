@@ -21,10 +21,10 @@ from dashboard.runtime import ansible_tool
 from dashboard.software_client import packages
 from dashboard.own_packages import OwnPackages
 from dashboard.teacher_software import HOST as TEACHER, TeacherSoftware
-from maintenance.preview import BERLIN
+from maintenance.preview import BERLIN, CLIENT_WORKERS
 from maintenance.reservations import reserved
 
-SOFTWARE_WORKERS = 16
+SOFTWARE_WORKERS = CLIENT_WORKERS
 MAX_RUN_BYTES = 16 * 1024 * 1024
 
 

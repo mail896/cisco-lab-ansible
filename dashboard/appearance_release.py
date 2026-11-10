@@ -12,7 +12,7 @@ import uuid
 from dashboard.deploy import (APPEARANCE_PROBE, CISCO_FILES, GREETER_CURRENT, IMAGE_CURRENT,
                               JOBS, LAB_TARGETS, PILOTS, ROOT, close_control_socket)
 from dashboard.greeter_refresh import refresh_greeter
-from maintenance.preview import BERLIN
+from maintenance.preview import BERLIN, CLIENT_WORKERS
 from maintenance.reservations import reserved
 
 JOB = 'appearance'
@@ -176,8 +176,7 @@ class AppearanceRelease:
                                         self.directory/(run['id']+'-'+host+'.log'),
                                         Path(ssh_directory)/host,run['job'])
 
-                workers = 8 if run['job'] == JOB else 6
-                with ThreadPoolExecutor(max_workers=workers) as pool:
+                with ThreadPoolExecutor(max_workers=CLIENT_WORKERS) as pool:
                     jobs = {pool.submit(work,host):host for host in run['targets']}
                     for job in as_completed(jobs):
                         host = jobs[job]

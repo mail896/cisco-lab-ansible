@@ -9,9 +9,10 @@ import time
 
 from dashboard.deploy import LAB_TARGETS, ROOT
 from maintenance.controller import ssh, targets
+from maintenance.preview import CLIENT_WORKERS
 
 INTERVAL = 60
-WORKERS = 16
+WORKERS = CLIENT_WORKERS
 ERRORS = dict(identity='Die Clientidentität passt nicht zur Aufnahme.',
               manifest='Geprüfte LAB-Adapterzuordnung fehlt. Clientaufnahme prüfen.',
               **{'adapter-identity':'Der LAB-Adapter ist nicht eindeutig zugeordnet.'},

@@ -20,7 +20,7 @@ Der echte Raum als gemeinsame Oberfläche. 16 Schülerclients in acht Teams und 
 
 ### IServ und Rollen
 
-Ein Login, klar begrenzte Rechte. Die Einstiegsseite führt über „IServ Login“ zur Schulanmeldung. Das fest zugeordnete Administratorkonto verwaltet Geräte, Software, Wartung und Sicherungen. Mitglieder von Kollegium können die freigegebenen Ansichten lesen und sämtliche Sammelaktionen ausführen.
+Ein Login, klar begrenzte Rechte. Die Einstiegsseite führt über „IServ Login“ zur Schulanmeldung. Das fest zugeordnete Administratorkonto verwaltet Geräte, Software, Wartung und Sicherungen. Mitglieder von Kollegium können die freigegebenen Ansichten lesen, sämtliche Sammelaktionen ausführen und den Aufgabengenerator einschließlich eigener Vorlagen verwenden.
 
 ### Neuinstallation
 
@@ -43,6 +43,18 @@ Einzelne Plätze, Teams oder den ganzen Raum steuern. Rechner einzeln anhaken od
 USB-Labornetze live überblicken. Die Unterrichtsansicht verwendet dieselbe Raumgrafik wie Übersicht, Sammelaktionen und Softwareauswahl. Pro Rechner zeigt sie den USB-Link, den erkannten Adaptertyp, IPv4-/IPv6-Adressen und die Anzahl der Routen. Angemeldete grafische Benutzer erscheinen am Sitzplatz, soweit ihr Zustand gelesen werden konnte.
 
 ![Unterricht](docs/media/dashboard-classroom.jpg)
+
+### Aufgabengenerator
+
+Routing-Übungen mit IPv4/IPv6, bis zu acht Teams, editierbaren Vorlagen, Schüler-PDF und Musterlösung ZIP. Bestehende Netze bleiben beim Wechsel der IP-Version erhalten; erst ausdrückliches Speichern übernimmt eine Vorschau in die Sammlung.
+
+[Vollständige Anleitung zum Aufgabengenerator](docs/aufgabengenerator.md)
+
+![Aufgabe, Protokolle und Teamvarianten in der laufenden APP](docs/media/exercise-overview.jpg)
+
+![Formatierbare Aufgabentexte und wiederverwendbare Vorlagen](docs/media/exercise-texts.jpg)
+
+![Echtes Aufgaben-PDF: Netzadressen und Arbeitsauftrag](docs/media/exercise-pdf-task.png)
 
 ### Repo Software
 
@@ -105,4 +117,4 @@ Die zusätzlichen Desktop- und Labornetz-Bilder zeigen reale LAB-Clients; sie do
 
 ## Version und Kontakt
 
-Dokumentierter APP-Stand: **2026.11.09**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)
+Dokumentierter APP-Stand: **2026.11.10**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)

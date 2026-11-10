@@ -325,7 +325,7 @@ class BrowserWorkflowTests(unittest.TestCase):
         from dashboard.server import PUBLIC_THEME_ASSETS,PUBLIC_AUTH_ASSETS
         if path in PUBLIC_THEME_ASSETS:name=PUBLIC_THEME_ASSETS[path][0]
         if path in PUBLIC_AUTH_ASSETS:name=PUBLIC_AUTH_ASSETS[path][0]
-        if path in ('/', '/schuelerclients', '/installationsfolge', '/sammelaktionen', '/playbooks', '/anmeldungen', '/pilotdeploys', '/backup', '/desktopbilder', '/wartung','/repo-software','/unterricht'): name = 'index.html'
+        if path in ('/', '/schuelerclients', '/installationsfolge', '/sammelaktionen', '/playbooks', '/anmeldungen', '/pilotdeploys', '/backup', '/desktopbilder', '/wartung','/repo-software','/unterricht','/aufgaben'): name = 'index.html'
         file = ROOT / 'dashboard' / name
         if not file.is_file(): route.fulfill(status=404); return
         if name == 'index.html':

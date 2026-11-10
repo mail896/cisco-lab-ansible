@@ -12,7 +12,7 @@ import threading
 import uuid
 
 from dashboard.deploy import ADMISSIONS, LAB_TARGETS, PILOTS, ROOT
-from maintenance.preview import BERLIN, pinned_hosts_file
+from maintenance.preview import BERLIN, CLIENT_WORKERS, pinned_hosts_file
 from maintenance.reservations import reserved
 
 TARGETS = LAB_TARGETS
@@ -204,8 +204,7 @@ class RoomActions:
     def execute(self, run, wake):
         try:
             targets = run['targets'] if 'targets' in run else SCOPES[run['scope']]
-            workers = 8 if run['action'] in ('demo','demo-end') else 4
-            with ThreadPoolExecutor(max_workers=workers) as pool:
+            with ThreadPoolExecutor(max_workers=CLIENT_WORKERS) as pool:
                 jobs = {pool.submit(self.on_host,host,run['action'],wake):host for host in targets}
                 for job in as_completed(jobs):
                     run['results'][jobs[job]] = job.result()

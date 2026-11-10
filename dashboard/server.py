@@ -33,6 +33,8 @@ from dashboard.room import ACTIONS, CAPABILITIES, SCOPES, RoomActions
 from dashboard.software import Software
 from dashboard.playbook_groups import PlaybookGroups
 from dashboard.classroom import Classroom
+from dashboard.exercises import Exercises
+from dashboard import exercise_api
 from dashboard.targets import HOSTS
 from dashboard.client_report import Dashboard
 
@@ -49,6 +51,10 @@ ASSETS = {
     '/software.js': ('software.js', 'text/javascript; charset=utf-8'),
     '/playbook_groups.js': ('playbook_groups.js', 'text/javascript; charset=utf-8'),
     '/classroom.js': ('classroom.js', 'text/javascript; charset=utf-8'),
+    '/exercises.js': ('exercises.js', 'text/javascript; charset=utf-8'),
+    '/exercises.css': ('exercises.css', 'text/css; charset=utf-8'),
+    '/vendor/jodit/jodit.min.js': ('vendor/jodit/jodit.min.js', 'text/javascript; charset=utf-8'),
+    '/vendor/jodit/jodit.min.css': ('vendor/jodit/jodit.min.css', 'text/css; charset=utf-8'),
 }
 PUBLIC_ICONS = {
     '/assets/cisco-lab.svg': ('assets/cisco-lab.svg', 'image/svg+xml'),
@@ -73,14 +79,14 @@ THEME_PICKER = ('<label class="theme-picker">'+icon('<path d="M20 13.1A8 8 0 0 1
                 '<span class="theme-label">Darstellung</span><select data-theme-select aria-label="Darstellung">'
                 '<option value="system">System</option><option value="light">Hell</option>'
                 '<option value="dark">Dunkel</option></select></label>')
-APP_VERSION = '2026.11.09'
+APP_VERSION = '2026.11.10'
 FOOTER = ('<footer class="app-footer"><span class="footer-credit">2026 - Marc Schulz'
           '<a class="mail-icon" href="mailto:marc.schulz@bbs-einbeck.de" aria-label="E-Mail an Marc Schulz" title="E-Mail an Marc Schulz">' + MAIL_ICON + '</a></span>'
           '<a href="https://github.com/mail896/cisco-lab-ansible" target="_blank" rel="noopener noreferrer">' + GITHUB_ICON + 'GitHub</a>'
           '<a href="https://mail896.github.io/cisco-lab-ansible/" target="_blank" rel="noopener noreferrer">' + PAGES_ICON + 'Pages</a>'
           '<span class="app-version">Version ' + APP_VERSION + '</span></footer>')
 for page in ('/schuelerclients', '/installationsfolge', '/pilotdeploys',
-             '/sammelaktionen', '/backup', '/desktopbilder', '/playbooks', '/wartung', '/anmeldungen', '/repo-software','/unterricht'):
+             '/sammelaktionen', '/backup', '/desktopbilder', '/playbooks', '/wartung', '/anmeldungen', '/repo-software','/unterricht','/aufgaben'):
     ASSETS[page] = ASSETS['/']
 
 
@@ -327,7 +333,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Cache-Control', cache_control)
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
-        self.send_header('Content-Security-Policy', "default-src 'self'; object-src 'none'; frame-ancestors 'none'")
+        policy="default-src 'self'; object-src 'none'; frame-ancestors 'none'"
+        if self.path == '/aufgaben':policy+="; style-src 'self' 'unsafe-inline'"
+        self.send_header('Content-Security-Policy', policy)
         for name, value in [*headers, *getattr(self, 'extra_auth_headers', [])]:
             self.send_header(name, value)
         self.end_headers()
@@ -344,7 +352,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self._trusted_request():
             return self._json(403, {'error': 'Nur lokaler Zugriff.'})
         self.history_page = None
-        paged = re.fullmatch(r'(/api/(?:playbook-groups|software|pilot|room|backup|fresh|logins|maintenance-runs|teacher/runs|appearance/rollout|rollout/state/[a-z-]+))/page/([1-9][0-9]{0,5})', self.path)
+        paged = re.fullmatch(r'(/api/(?:exercises|playbook-groups|software|pilot|room|backup|fresh|logins|maintenance-runs|teacher/runs|appearance/rollout|rollout/state/[a-z-]+))/page/([1-9][0-9]{0,5})', self.path)
         if paged:
             self.path, number = paged.groups()
             self.history_page = int(number)
@@ -363,6 +371,8 @@ class Handler(BaseHTTPRequestHandler):
         if self._auth_route():
             return
         if not self._authorized():
+            return
+        if exercise_api.get(self):
             return
         if self.path == '/api/session':
             user = self.identity
@@ -508,7 +518,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(503, {'error': 'Zentrale Wartungsergebnisse konnten nicht gelesen werden.'})
         if self.path == '/api/maintenance-hosts':
             try:
-                return self._json(200, {'hosts': self.server.provision.maintenance_hosts()})
+                from maintenance.preview import CLIENT_WORKERS
+                return self._json(200, {'hosts': self.server.provision.maintenance_hosts(), 'parallelism': CLIENT_WORKERS})
             except (OSError, ValueError):
                 return self._json(503, {'error': 'Wartungsregistrierung konnte nicht gelesen werden.'})
         if self.path == '/api/maintenance' or self.path.startswith('/api/maintenance/'):
@@ -618,6 +629,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             return
         if not self._csrf():
+            return
+        if exercise_api.post(self):
             return
         if self.path == '/logout' and getattr(self, 'session', None):
             self.server.auth.logout(cookie_value(self.headers.get('Cookie', ''), SESSION_COOKIE))
@@ -886,6 +899,7 @@ def main():
             server.playbook_groups = PlaybookGroups(state_dir / 'playbook-groups', server.deployments, server.software)
             server.provision.playbook_groups = server.playbook_groups
             server.classroom = Classroom()
+            server.exercises = Exercises(state_dir / 'exercises')
             server.presence = Presence()
             server.password_path = password
             server.auth = auth

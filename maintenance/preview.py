@@ -9,6 +9,7 @@ import subprocess
 from zoneinfo import ZoneInfo
 
 BERLIN = ZoneInfo('Europe/Berlin')
+CLIENT_WORKERS = 16
 LAB_HOST = re.compile(r'LAB-0[1-8][AB]\Z')
 PROTECTED_PACKAGES = {
     'apt', 'dpkg', 'sudo', 'systemd', 'openssh-server', 'openssh-client',
@@ -196,7 +197,7 @@ def main():
     inventory=load_targets(args.inventory)
     hosts=list(inventory)
     addresses=list(inventory.values())
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=CLIENT_WORKERS) as executor:
         probes = executor.map(
             lambda target: probe_host(*target, args.key, args.lab08b_known_hosts, args.pin_directory),
             zip(hosts, addresses),

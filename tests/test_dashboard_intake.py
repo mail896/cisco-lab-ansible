@@ -63,7 +63,7 @@ class IntakeTests(unittest.TestCase):
             self.assertLess(monotonic(), deadline)
             sleep(.01)
 
-    def test_bulk_read_four_workers_partial_failure_and_secret_lifetime(self):
+    def test_bulk_read_capacity_partial_failure_and_secret_lifetime(self):
         hosts = ['LAB-01A', 'LAB-01B', 'LAB-02A', 'LAB-02B', 'LAB-03A']
         started = []; release = threading.Event()
         def read(host, pin, password):
@@ -72,7 +72,9 @@ class IntakeTests(unittest.TestCase):
             if host == hosts[0]:
                 raise intake.ReadError('usb-adapter')
             return device(host)
-        with patch.object(intake, 'scan_key', return_value=('pin\n','SHA256:'+'a'*43)), \
+        # A smaller fixture capacity exercises queuing as well as partial failure.
+        with patch.object(provision, 'FRESH_WORKERS', 4), \
+                patch.object(intake, 'scan_key', return_value=('pin\n','SHA256:'+'a'*43)), \
                 patch.object(intake, 'read_device', side_effect=read):
             try:
                 result = self.intake.start_many(hosts, 'ephemeral', True, {})

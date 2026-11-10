@@ -34,9 +34,9 @@ RestrictAddressFamilies=AF_UNIX AF_INET AF_NETLINK
 IPAddressDeny=any
 IPAddressAllow=127.0.0.0/8
 IPAddressAllow=203.0.113.0/24
-MemoryMax=1G
-CPUQuota=100%
-TasksMax=128
+MemoryMax=4G
+CPUQuota=200%
+TasksMax=512
 LimitNOFILE=4096
 
 [Install]

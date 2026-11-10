@@ -20,7 +20,7 @@ The actual classroom in one shared view. The shared room diagram represents 16 s
 
 ### IServ and roles
 
-One sign-in with explicit permissions. The landing page opens school authentication through “IServ Login”. The designated administrator manages devices, software, maintenance and backups. Members of the staff group Kollegium can read the permitted views and execute all bulk actions.
+One sign-in with explicit permissions. The landing page opens school authentication through “IServ Login”. The designated administrator manages devices, software, maintenance and backups. Members of the staff group Kollegium can read permitted views, execute all bulk actions and use the exercise generator with their own templates.
 
 ### New installation
 
@@ -43,6 +43,18 @@ Control individual seats, teams or the whole room. Tick individual devices or cl
 See USB lab networks live. The teaching view uses the same room diagram as the overview, bulk actions and software selection. Each device shows USB link state, detected adapter model, IPv4/IPv6 addresses and route counts. Graphical-session users appear beside their seats when their state could be read.
 
 ![Teaching view](docs/media/dashboard-classroom.jpg)
+
+### Exercise generator
+
+IPv4/IPv6 routing exercises for up to eight teams, editable templates, student PDFs and worked-solution ZIPs. Existing networks survive protocol selection changes; only explicit saving adds a preview to the collection.
+
+[Complete exercise generator guide](docs/aufgabengenerator.en.md)
+
+![Exercise settings, protocols and team variants in the running APP](docs/media/exercise-overview.jpg)
+
+![Formatted task text and reusable templates](docs/media/exercise-texts.jpg)
+
+![Actual worksheet PDF: network addresses and student tasks](docs/media/exercise-pdf-task.png)
 
 ### Repository software
 
@@ -105,4 +117,4 @@ Additional desktop and lab-network images show actual LAB clients; they document
 
 ## Version and contact
 
-Documented APP version: **2026.11.09**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)
+Documented APP version: **2026.11.10**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)

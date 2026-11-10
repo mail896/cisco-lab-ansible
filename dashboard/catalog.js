@@ -501,6 +501,7 @@ let maintenanceBusy = true;
 let maintenanceStarting = false;
 const maintenanceSelection = new Set();
 let maintenanceHosts = [];
+let maintenanceParallelism = 16;
 function updateMaintenanceControls() {
   const disabled = labRole !== 'admin' || maintenanceBusy || maintenanceStarting;
   el('maintenance-start').disabled = disabled || !maintenanceSelection.size;
@@ -508,7 +509,7 @@ function updateMaintenanceControls() {
   el('maintenance-all').disabled = el('maintenance-none').disabled = disabled || !maintenanceHosts.length;
   for (const check of el('maintenance-targets').querySelectorAll('input')) check.disabled = disabled;
   el('maintenance-selection').textContent = maintenanceSelection.size + ' von ' + maintenanceHosts.length
-    + ' Schülerclients ausgewählt · bis zu 4 gleichzeitig';
+    + ' Schülerclients ausgewählt · bis zu ' + maintenanceParallelism + ' gleichzeitig';
 }
 function resetMaintenanceStatus() {
   maintenanceProbeVersion++;
@@ -528,10 +529,10 @@ async function loadMaintenance() {
   el('maintenance-refresh').disabled = true;
   el('maintenance-status').textContent = 'Live-Status für ' + hosts.length + ' Schülerclients wird geprüft …';
   try {
-    // Read only on request, at most four SSH probes at once, with partial results.
+    // Use the same client concurrency as the controller.
     const results = new Map();
     let next = 0;
-    await Promise.all(Array.from({length: Math.min(4, hosts.length)}, async () => {
+    await Promise.all(Array.from({length: Math.min(maintenanceParallelism, hosts.length)}, async () => {
       while (next < hosts.length && version === maintenanceProbeVersion) {
         const host = hosts[next++];
         try { results.set(host, await request('/api/maintenance/' + host)); }
@@ -633,6 +634,7 @@ async function loadMaintenanceHosts(refreshLive = false) {
       request('/api/maintenance-hosts'), requestHistory('/api/maintenance-runs', 'maintenance-runs', () => loadMaintenanceHosts(false))
     ]);
     if (!central) return;
+    maintenanceParallelism = data.parallelism || 16;
     // Keep the current run visible even while browsing older history pages.
     const recent = central.pagination.page === 1 ? central : await request('/api/maintenance-runs');
     renderCurrentMaintenance(recent.runs[0]);

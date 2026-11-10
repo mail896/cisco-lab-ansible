@@ -9,6 +9,7 @@ import time
 
 from dashboard.deploy import LAB_TARGETS
 from maintenance.teacher_wake import ADDRESS as TEACHER_ADDRESS
+from maintenance.preview import CLIENT_WORKERS
 
 TARGETS = {**LAB_TARGETS, 'LAB-Teacher': TEACHER_ADDRESS}
 INTERVAL = 30
@@ -77,7 +78,7 @@ class Presence:
     def _refresh(self):
         results = {}
         try:
-            with ThreadPoolExecutor(max_workers=4, thread_name_prefix='lab-ping') as pool:
+            with ThreadPoolExecutor(max_workers=CLIENT_WORKERS, thread_name_prefix='lab-ping') as pool:
                 pending = {host: pool.submit(self.probe, address) for host, address in TARGETS.items()}
                 for host, future in pending.items():
                     try:

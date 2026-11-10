@@ -577,7 +577,7 @@ class Backups:
                     source_paths += apps_system_sources()
                     run['lab_system_copy'] = True
                 paths = source_paths + tuple(self.state_dir/name for name in (
-                    'passwort', 'auth', 'deploys', 'room', 'appearance', 'appearance-releases', 'provision', 'maintenance', 'teacher', 'playbook-groups',
+                    'passwort', 'auth', 'deploys', 'room', 'appearance', 'appearance-releases', 'provision', 'maintenance', 'teacher', 'playbook-groups', 'exercises',
                 ))
                 # Keep retention/confirmation records without copying the recovery key.
                 paths += tuple(self.directory.glob('*.json')) + tuple(self.directory.glob('*.log'))

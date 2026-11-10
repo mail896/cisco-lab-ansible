@@ -6,9 +6,9 @@ Eine zentrale Weboberfläche für ein Debian-/KDE-Netzwerklabor mit IServ: Gerä
 
 Im Raum stehen 16 Schüler-PCs in acht Zweierteams sowie ein Teacher-PC. Die interne Netzwerkkarte verbindet jeden Client mit dem Schulnetz; ein USB-Ethernet-Adapter führt ausschließlich ins Übungsnetz mit echten Switches und Routern. Die APP-Verwaltung läuft als eigener Dienst auf einem separaten Server.
 
-APP-Version **2026.11.09**. Die Navigation und Schaltflächen heißen in beiden Anleitungen so wie in der deutschen Anwendung.
+APP-Version **2026.11.10**. Die Navigation und Schaltflächen heißen in beiden Anleitungen so wie in der deutschen Anwendung.
 
-[Raumübersicht](#overview) · [IServ und Rollen](#login) · [Neuinstallation](#installation) · [Schülerclients](#clients) · [Sammelaktionen](#room) · [Unterricht](#classroom) · [Repo Software](#software) · [Playbook-Gruppen](#playbooks) · [Pilot und Raumverteilung](#pilots) · [Wartung](#maintenance) · [Desktopbilder](#images) · [Sicherung und Wiederherstellung](#backup)
+[Raumübersicht](#overview) · [IServ und Rollen](#login) · [Neuinstallation](#installation) · [Schülerclients](#clients) · [Sammelaktionen](#room) · [Unterricht](#classroom) · [Aufgabengenerator](#exercises) · [Repo Software](#software) · [Playbook-Gruppen](#playbooks) · [Pilot und Raumverteilung](#pilots) · [Wartung](#maintenance) · [Desktopbilder](#images) · [Sicherung und Wiederherstellung](#backup)
 
 <a id="overview"></a>
 
@@ -30,7 +30,7 @@ Kacheln führen direkt zu den passenden Bereichen. Das LAB-Symbol lädt die Übe
 
 **Ein Login, klar begrenzte Rechte**
 
-Die Einstiegsseite führt über „IServ Login“ zur Schulanmeldung. Das fest zugeordnete Administratorkonto verwaltet Geräte, Software, Wartung und Sicherungen. Mitglieder von Kollegium können die freigegebenen Ansichten lesen und sämtliche Sammelaktionen ausführen.
+Die Einstiegsseite führt über „IServ Login“ zur Schulanmeldung. Das fest zugeordnete Administratorkonto verwaltet Geräte, Software, Wartung und Sicherungen. Mitglieder von Kollegium können die freigegebenen Ansichten lesen, sämtliche Sammelaktionen ausführen und den Aufgabengenerator einschließlich eigener Vorlagen verwenden.
 
 Konten außerhalb des Kollegiums erhalten eine verständliche Ablehnung. Erfolgreiche und abgewiesene Anmeldungen werden mit der von IServ bestätigten Identität protokolliert, sofern diese vorliegt. Das Anmeldeprotokoll sieht ausschließlich der Administrator.
 
@@ -99,6 +99,20 @@ Die Unterrichtsansicht verwendet dieselbe Raumgrafik wie Übersicht, Sammelaktio
 Die USB-/Anmeldeprüfung läuft bei sichtbarer Seite etwa jede Minute mit begrenzten parallelen Abfragen. Die Pinganzeige nutzt den gemeinsamen Erreichbarkeitscache. Suche und „Live pausieren“ helfen bei der gezielten Besprechung. Diese Ansicht liest Zustände; sie konfiguriert die Schülernetze nicht.
 
 ![Unterricht](media/dashboard-classroom.jpg)
+
+<a id="exercises"></a>
+
+## Aufgabengenerator
+
+Unter Unterricht → Aufgabengenerator entstehen Übungen für zwei LANs, zwei Router und zwei Switche. Vorschau, Aufgabentexte, Adressplan und Musterlösung gehören zu demselben Aufgabenstand. Die Erzeugung und die Exporte verändern keine Geräte.
+
+Routing-Übungen mit IPv4/IPv6, bis zu acht Teams, editierbaren Vorlagen, Schüler-PDF und Musterlösung ZIP. Bestehende Netze bleiben beim Wechsel der IP-Version erhalten; erst ausdrückliches Speichern übernimmt eine Vorschau in die Sammlung.
+
+[Vollständige Anleitung zum Aufgabengenerator](aufgabengenerator.md)
+
+![Aufgabe, Protokolle und Teamvarianten in der laufenden APP](media/exercise-overview.jpg)
+
+![Eigene Wireshark-Aufträge und getrennte Lösungshinweise](media/exercise-wireshark.jpg)
 
 <a id="software"></a>
 
@@ -224,6 +238,6 @@ Packet Tracer ist proprietäre Zusatzsoftware und muss separat bereitgestellt we
 
 Die Screenshots zeigen die laufende deutsche Oberfläche in einer kontrollierten Administrationsansicht. Namen grafisch angemeldeter Personen werden für die Veröffentlichung ausgeblendet. Die englische Dokumentation beschreibt dieselben Funktionen; die Anwendung selbst ist deutschsprachig.
 
-Die sichtbaren Zeitpunkte und Gerätezustände sind Momentaufnahmen. Sie garantieren keine spätere Erreichbarkeit. Die Lehrkräfteansicht enthält keine administrativen Schreibfunktionen außerhalb der freigegebenen Sammelaktionen.
+Die sichtbaren Zeitpunkte und Gerätezustände sind Momentaufnahmen. Sie garantieren keine spätere Erreichbarkeit. Lehrkräfte dürfen zusätzlich Aufgaben erzeugen, exportieren und eigene Vorlagen und Sammlungsstände verwalten. Andere administrative Schreibfunktionen bleiben gesperrt.
 
 [README](../README.md) · [Pages](https://mail896.github.io/cisco-lab-ansible/)
