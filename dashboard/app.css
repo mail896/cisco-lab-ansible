@@ -131,7 +131,7 @@ nav a[aria-current="page"] svg { opacity: 1; }
 html[data-role="reader"] .reader-notice { display: block; }
 html[data-role="reader"] [data-admin-only] { opacity: .55; }
 html[data-role="reader"] [data-admin-nav] { display: none; }
-.app-footer { border-top: 1px solid var(--ui-border, #dce4ed); margin-top: 32px; padding: 20px 0 4px; display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: .85rem; color: var(--ui-muted, #546579); }
+.app-footer { border-top: 1px solid var(--ui-border, #dce4ed); margin-top: 32px; padding: 20px 0 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: .85rem; color: var(--ui-muted, #546579); }
 .app-footer a { color: var(--ui-link, #1c4971); }
 .app-footer a, .footer-credit { display: inline-flex; align-items: center; gap: 7px; }
 .app-footer svg { width: 17px; height: 17px; flex: none; }
