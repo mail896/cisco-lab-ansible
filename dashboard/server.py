@@ -79,7 +79,7 @@ THEME_PICKER = ('<label class="theme-picker">'+icon('<path d="M20 13.1A8 8 0 0 1
                 '<span class="theme-label">Darstellung</span><select data-theme-select aria-label="Darstellung">'
                 '<option value="system">System</option><option value="light">Hell</option>'
                 '<option value="dark">Dunkel</option></select></label>')
-APP_VERSION = '2026.11.10'
+APP_VERSION = '2026.11.14'
 FOOTER = ('<footer class="app-footer"><span class="footer-credit">2026 - Marc Schulz'
           '<a class="mail-icon" href="mailto:marc.schulz@bbs-einbeck.de" aria-label="E-Mail an Marc Schulz" title="E-Mail an Marc Schulz">' + MAIL_ICON + '</a></span>'
           '<a href="https://github.com/mail896/cisco-lab-ansible" target="_blank" rel="noopener noreferrer">' + GITHUB_ICON + 'GitHub</a>'

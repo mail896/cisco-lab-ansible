@@ -44,6 +44,7 @@ FILES = (
     'deployment/apps/prepare_teacher_access.py',
     'deployment/teacher/retire_legacy.py',
     'maintenance/controller.py',
+    'maintenance/package_history.py',
     'maintenance/pilot.py',
     'maintenance/preview.py',
     'maintenance/reservations.py',

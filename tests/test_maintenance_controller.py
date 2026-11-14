@@ -24,6 +24,8 @@ class ControllerTests(unittest.TestCase):
         self.start = self.enterContext(patch.object(controller, 'start_service'))
         self.power = self.enterContext(patch.object(controller.RoomActions, 'on_host'))
         self.wake = self.enterContext(patch.object(controller.RoomActions, 'wake'))
+        self.packages = self.enterContext(patch.object(controller, 'package_report', return_value={
+            'status':'recorded','upgraded':[{'name':'curl:amd64','versions':'1, 2'}], 'installed':[], 'removed':[]}))
         self.enterContext(patch.object(controller.RoomActions, '__init__', return_value=None))
 
     def state(self, **values):
@@ -41,6 +43,8 @@ class ControllerTests(unittest.TestCase):
         result = controller.on_host(self.host, self.record, None, True)
         self.assertEqual(result['status'], 'succeeded')
         self.assertEqual(self.probe.call_count, 4)
+        self.packages.assert_called_once()
+        self.assertEqual(result['packages']['upgraded'][0]['name'], 'curl:amd64')
         self.start.assert_called_once()
         self.power.assert_not_called()
 
@@ -55,6 +59,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.on_host(self.host, self.record, None, True)
         self.assertEqual(result['status'], 'skipped')
         self.start.assert_not_called()
+        self.packages.assert_not_called()
         self.power.assert_not_called()
 
     def test_woken_free_client_is_powered_off_after_confirmed_reboot(self):
@@ -79,6 +84,8 @@ class ControllerTests(unittest.TestCase):
             result = controller.on_host(self.host, self.record, None, False)
         self.assertEqual(result['status'], 'succeeded')
         self.start.assert_not_called()
+        self.packages.assert_not_called()
+        self.assertEqual(result['packages']['status'], 'unavailable')
 
     def test_manual_trial_cannot_reuse_an_earlier_success_as_its_own_reboot(self):
         previous = self.result(boot='earlier')

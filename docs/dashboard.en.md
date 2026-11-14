@@ -6,7 +6,7 @@ A central web application for a Debian/KDE networking classroom with IServ: enro
 
 The classroom contains 16 student PCs in eight two-person teams and a teacher PC. Each client's internal NIC connects to the school network; a USB Ethernet adapter connects to the separate training network with real switches and routers. The APP console runs as its own service on a separate server.
 
-APP version **2026.11.10**. Both guides retain German navigation and button labels so they match the running application.
+APP version **2026.11.14**. Both guides retain German navigation and button labels so they match the running application.
 
 [Room overview](#overview) · [IServ and roles](#login) · [New installation](#installation) · [Student clients](#clients) · [Bulk actions](#room) · [Teaching view](#classroom) · [Exercise generator](#exercises) · [Repository software](#software) · [Playbook groups](#playbooks) · [Pilot and room rollout](#pilots) · [Maintenance](#maintenance) · [Desktop images](#images) · [Backup and recovery](#backup)
 
@@ -175,6 +175,12 @@ The administrator can also start maintenance outside the evening window for one,
 After a successful automatic student phase, the teacher follows through its restricted receiver. Local/graphical sessions defer teacher maintenance; SSH-only sessions do not block it. A device woken specifically for maintenance is shut down after successful completion; a device that was already on remains on.
 
 History, detailed results and logs distinguish success, failure and deferral. Planned update package names and the shared client report support verification. A completed student result does not imply that the teacher was maintained as well.
+
+Maintenance history shows how many updates were actually installed on each student client. Expandable package details list upgraded, newly installed and removed packages with version information. After confirmed maintenance, completed LAB transactions are read once from APT history and stored with the APP run. Opening or paging history does not query clients again. Older runs and ambiguous or unreadable histories show “Update-Ergebnis nicht erfasst”; missing evidence never means zero updates. The student-client page instead shows updates that are still available.
+
+![Paketnachweis / Package evidence](media/maintenance-update-history.jpg)
+
+Controlled APP view with example package evidence, not real installation statistics.
 
 ![Maintenance](media/dashboard-maintenance.jpg)
 
