@@ -117,4 +117,4 @@ Additional desktop and lab-network images show actual LAB clients; they document
 
 ## Version and contact
 
-Documented APP version: **2026.11.10**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)
+Documented APP version: **2026.11.14**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)

@@ -576,6 +576,33 @@ function maintenanceRunHeading(run) {
   return title;
 }
 
+function maintenancePackageInfo(result) {
+  const report = result.packages;
+  const note = document.createElement('small');
+  if (report?.status !== 'recorded') {
+    note.textContent = 'Update-Ergebnis nicht erfasst.';
+    note.title = report?.reason || 'Für diesen Lauf wurden Paketänderungen noch nicht gespeichert.';
+    return note;
+  }
+  const groups = [['upgraded', 'Aktualisiert'], ['installed', 'Neu installiert'], ['removed', 'Entfernt']];
+  const count = key => Array.isArray(report[key]) ? report[key].length : 0;
+  const label = [count('upgraded') ? count('upgraded')+(count('upgraded')===1?' Update installiert':' Updates installiert') : 'Keine Updates installiert',
+    count('installed') ? count('installed')+(count('installed')===1?' Paket neu installiert':' Pakete neu installiert') : '',
+    count('removed') ? count('removed')+(count('removed')===1?' Paket entfernt':' Pakete entfernt') : ''].filter(Boolean).join(' · ');
+  if (!groups.some(([key]) => count(key))) { note.textContent=label+'.'; return note; }
+  const details=document.createElement('details');details.className='maintenance-packages';
+  const summary=document.createElement('summary');summary.textContent=label;
+  const list=document.createElement('dl');
+  for (const [key,title] of groups) {
+    if (!count(key)) continue;
+    const term=document.createElement('dt');term.textContent=title;
+    const values=document.createElement('dd');
+    values.textContent=report[key].map(row=>row.name+(row.versions?' ('+row.versions+')':'')).join(', ');
+    list.append(term,values);
+  }
+  details.append(summary,list);return details;
+}
+
 function maintenanceResultRows(run) {
   const results = run.results || {};
   const hosts = [...new Set([...(run.targets || []), ...Object.keys(results)])].sort();
@@ -590,6 +617,7 @@ function maintenanceResultRows(run) {
       : run.status === 'running' ? 'Endergebnis steht noch aus' : 'Kein Ergebnis gespeichert';
     status.className = 'badge ' + (result?.status === 'succeeded' ? 'good' : result?.status === 'failed' ? 'warn' : 'neutral');
     row.append(name, status);
+    if (result) row.append(maintenancePackageInfo(result));
     if (result?.reason || result?.woke || result?.poweroff) {
       const detail = document.createElement('small');
       detail.textContent = [result.reason, result.woke ? 'Per WOL gestartet' : '', result.poweroff].filter(Boolean).join(' · ');

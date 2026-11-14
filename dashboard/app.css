@@ -321,6 +321,11 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--ui-succe
 .maintenance-result-list { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
 .maintenance-result-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: .8rem; }
 .maintenance-result-list small { flex-basis: 100%; color: var(--ui-muted, #546579); }
+.maintenance-packages { flex-basis: 100%; min-width: 0; }
+.maintenance-packages summary { color: var(--ui-link, #1c4971); font-weight: 600; cursor: pointer; }
+.maintenance-packages dl { display: grid; grid-template-columns: max-content minmax(0,1fr); gap: 5px 12px; margin: 8px 0; }
+.maintenance-packages dt { font-weight: 600; }
+.maintenance-packages dd { margin: 0; overflow-wrap: anywhere; }
 #maintenance-current .maintenance-result-list { grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 12px; }
 #maintenance-current .maintenance-result-list li { padding: 10px 12px; border: 1px solid var(--ui-border, #ccd8e4); border-radius: 8px; }
 @media (max-width: 480px) { .maintenance-targets { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

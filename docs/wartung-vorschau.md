@@ -12,6 +12,12 @@ Nach erfolgreicher automatischer Schülerphase folgt der Teacher über seinen be
 
 Verlauf, Detailergebnisse und Protokolle unterscheiden Erfolg, Fehler und Zurückstellung. Paketnamen der Updateplanung und der gemeinsame Clientbericht helfen bei der Kontrolle. Ein abgeschlossenes Schülerergebnis ist keine Zusage, dass auch der Teacher gewartet wurde.
 
+Im Wartungsverlauf steht je Schülerclient, wie viele Updates tatsächlich installiert wurden. Aufklappbare Paketdetails nennen aktualisierte, neu installierte und entfernte Pakete mit Versionsangaben. Der Nachweis wird nach bestätigter Wartung einmalig aus abgeschlossenen LAB-Transaktionen im APT-Verlauf gelesen und im APP-Lauf gespeichert. Beim Öffnen oder Blättern erfolgen keine zusätzlichen Clientabfragen. Ältere Läufe und nicht eindeutig lesbare Verläufe zeigen „Update-Ergebnis nicht erfasst“; fehlende Daten werden nicht als null Updates ausgegeben. Die Schülerclient-Seite zeigt dagegen noch verfügbare Updates.
+
+![Paketnachweis / Package evidence](media/maintenance-update-history.jpg)
+
+Kontrollierte APP-Ansicht mit beispielhaften Paketnachweisen; keine echte Installationsstatistik.
+
 ![Wartung](media/dashboard-maintenance.jpg)
 
 Die Vorschau prüft unter anderem Sitzungen, vorgeschlagene Paketentfernungen, bootfähige Kernel und den versionsgebundenen Winbind-Fix. APT-/dpkg-Sperren dürfen nicht umgangen werden. Begonnene Pakettransaktionen dürfen fertig werden.

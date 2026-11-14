@@ -1086,6 +1086,27 @@ class BrowserWorkflowTests(unittest.TestCase):
         expect(self.page.locator('#maintenance-runs')).to_contain_text('Neustart bestätigt')
         self.assertFalse(self.errors,self.errors)
 
+    def test_maintenance_package_evidence_is_saved_expandable_and_missing_is_unknown(self):
+        self.histories['/api/maintenance-runs']=[dict(id='a'*32,status='finished',started='2026-11-13T18:00:00+01:00',
+            targets=['LAB-01A','LAB-01B','LAB-02A'],results={
+                'LAB-01A':dict(status='succeeded',packages=dict(status='recorded',upgraded=[dict(name='curl:amd64',versions='1.0, 1.1')],installed=[dict(name='helper:amd64',versions='2.0')],removed=[])),
+                'LAB-01B':dict(status='succeeded',packages=dict(status='recorded',upgraded=[],installed=[],removed=[])),
+                'LAB-02A':dict(status='succeeded')})]
+        self.page.goto(BASE+'/wartung')
+        run=self.page.locator('#maintenance-runs > details').first
+        run.locator(':scope > summary').click()
+        expect(run).to_contain_text('1 Update installiert')
+        expect(run).to_contain_text('1 Paket neu installiert')
+        expect(run).to_contain_text('Keine Updates installiert')
+        expect(run).to_contain_text('Update-Ergebnis nicht erfasst')
+        run.locator('.maintenance-packages summary').click()
+        expect(run.locator('.maintenance-packages dd').first).to_have_text('curl:amd64 (1.0, 1.1)')
+        run.locator('.maintenance-packages summary').click()
+        expect(run.locator('.maintenance-packages dd').first).to_be_hidden()
+        self.assertFalse(any(path.startswith('/api/maintenance/') for path,_ in self.calls))
+        self.assertFalse(any(payload is not None for _,payload in self.calls))
+        self.assertFalse(self.errors,self.errors)
+
     def test_client_update_and_cleanup_packages_expand_from_saved_data(self):
         client = next(row for row in self.client_report['clients'] if row['host']=='LAB-08A')
         client.update(update_packages=['curl','vim'],removals=1,removal_packages=['old-package'],apt_mode='central')

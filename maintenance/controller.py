@@ -19,6 +19,7 @@ from dashboard.deploy import LAB_TARGETS, ROOT
 from dashboard.operation_lock import OperationLock
 from dashboard.room import RoomActions
 from maintenance.preview import BERLIN, CLIENT_WORKERS, start_allowed
+from maintenance.package_history import unavailable
 
 CONFIG = ROOT/'local-private/maintenance-targets.json'
 PIN_DIRECTORY = ROOT/'local-private/maintenance-pins'
@@ -154,6 +155,27 @@ def reachable(host):
         return False
 
 
+def package_report(host, record, start, result):
+    """Read once after confirmed completion, never during history pagination."""
+    try:
+        end = datetime.fromisoformat(result['time'])
+        command = ssh(host, record, ['sudo', '-n', 'python3', '-IB', '-', host, start.isoformat(), end.isoformat()])
+        response = subprocess.run(command, input=(ROOT/'maintenance/package_history.py').read_text(),
+                                  capture_output=True, text=True, timeout=20, check=True)
+        data = json.loads(response.stdout)
+        if not isinstance(data, dict) or data.get('status') not in ('recorded', 'unavailable'):
+            raise ValueError('Ungültiger Paketnachweis.')
+        if data['status'] == 'recorded' and any(
+                not isinstance(data.get(key), list) or any(
+                    not isinstance(row, dict) or not isinstance(row.get('name'), str)
+                    or not isinstance(row.get('versions'), str) for row in data[key])
+                for key in ('upgraded', 'installed', 'removed')):
+            raise ValueError('Unvollständiger Paketnachweis.')
+        return data
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+        return unavailable('APT-Paketnachweis nicht erreichbar; Wartungsergebnis bleibt erhalten.')
+
+
 def start_service(host, record, manual):
     if manual:
         code=r'''from pathlib import Path
@@ -256,6 +278,8 @@ def on_host(host, record, route, manual):
         time.sleep(10)
     outcome=dict(status='succeeded',woke=woke,boot_id=final['boot_id'],result=final.get('result'),
                  initial_uptime=first['uptime'], initial_reachable=was_reachable)
+    outcome['packages'] = (unavailable('Bereits früher am Tag gewartet; kein neuer Paketlauf.')
+                           if completed_before_start else package_report(host, record, requested, final['result']))
     if woke and not final['occupied'] and not final['home_mounted']:
         class ManagedTargets:
             known_hosts_b=None

@@ -117,4 +117,4 @@ Die zusätzlichen Desktop- und Labornetz-Bilder zeigen reale LAB-Clients; sie do
 
 ## Version und Kontakt
 
-Dokumentierter APP-Stand: **2026.11.10**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)
+Dokumentierter APP-Stand: **2026.11.14**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)
