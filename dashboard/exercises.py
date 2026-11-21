@@ -214,6 +214,10 @@ def task_label(row):
     return row['title']+(' · '+names if names else '')+' · '+family+' · '+str(cfg['teams'])+' Team(s) · '+date+' · '+row['id'][:6]
 
 
+DRAFTS_PER_OWNER = 32
+DRAFTS_TOTAL = 512
+
+
 class Exercises:
     def __init__(self, directory):
         self.directory = Path(directory)
@@ -309,7 +313,12 @@ class Exercises:
     def remember(self, row):
         self.drafts[row['id']] = row
         self.drafts.move_to_end(row['id'])
-        while len(self.drafts) > 128:
+        # Each author keeps their own recent previews; colleagues working in
+        # parallel can no longer evict them. The total stays bounded in memory.
+        own = [key for key, draft in self.drafts.items() if draft['owner'] == row['owner']]
+        for key in own[:max(0, len(own) - DRAFTS_PER_OWNER)]:
+            del self.drafts[key]
+        while len(self.drafts) > DRAFTS_TOTAL:
             self.drafts.popitem(last=False)
 
     def preview(self, settings, text, user, names=None):
@@ -400,7 +409,8 @@ class Exercises:
             if previous and not self.editable(previous, user):
                 raise PermissionError('Diese Vorlage gehört einer anderen Lehrkraft. Bitte als Kopie speichern.')
             row = dict(id=identity or uuid.uuid4().hex, title=body['title'], text=body, options=cfg,
-                       owner=previous['owner'] if previous else principal(user), author=user['name'])
+                       owner=previous['owner'] if previous else principal(user),
+                       author=previous.get('author', user['name']) if previous else user['name'])
             self.validate_id(row['id'])
             self.write('templates', row)
             return self.public(row, user)

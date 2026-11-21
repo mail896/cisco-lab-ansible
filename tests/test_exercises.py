@@ -156,12 +156,16 @@ class CollectionTests(unittest.TestCase):
         self.assertFalse(reopened['defaults']['options']['ipv6'])
         self.assertEqual(self.store.task(task['id'],USER)['title'],DEFAULT_TEXT['title'])
 
-    def test_preview_cache_is_bounded_and_never_persisted(self):
+    def test_preview_cache_is_bounded_per_author_and_never_persisted(self):
+        from dashboard.exercises import DRAFTS_PER_OWNER
         first=self.store.preview({},DEFAULT_TEXT,USER)
-        for _ in range(128):self.store.preview({},DEFAULT_TEXT,USER)
-        self.assertEqual(len(self.store.drafts),128)
+        other=self.store.preview({},DEFAULT_TEXT,OTHER)
+        for _ in range(DRAFTS_PER_OWNER):self.store.preview({},DEFAULT_TEXT,USER)
+        self.assertEqual(len(self.store.drafts),DRAFTS_PER_OWNER+1)
         self.assertFalse(list(Path(self.temp).rglob('*.json')))
         with self.assertRaises(FileNotFoundError):self.store.task(first['id'],USER)
+        # A colleague's many previews do not evict this author's open preview.
+        self.assertEqual(self.store.task(other['id'],OTHER)['id'],other['id'])
 
     def test_editable_reset_sections_preserve_legacy_defaults_and_expand_per_team(self):
         from dashboard.exercises import expanded
@@ -192,7 +196,8 @@ class CollectionTests(unittest.TestCase):
         with self.assertRaises(PermissionError):self.store.template(template['id'],dict(DEFAULT_TEXT,title='Fremd'),{},OTHER)
         self.store.template(template['id'],dict(DEFAULT_TEXT,title='Überarbeitet'),{},USER)
         self.assertEqual(self.store.state(OTHER)['templates'][0]['title'],'Überarbeitet')
-        self.store.template(template['id'],dict(DEFAULT_TEXT,title='Admin'),{},ADMIN)
+        edited=self.store.template(template['id'],dict(DEFAULT_TEXT,title='Admin'),{},dict(ADMIN,name='Administrator'))
+        self.assertEqual(edited['author'],USER['name'])
         task=self.store.create({},DEFAULT_TEXT,USER)
         with self.assertRaises(PermissionError):self.store.delete('tasks',task['id'],OTHER)
         self.assertEqual(self.store.task(task['id'],OTHER)['variants'],task['variants'])

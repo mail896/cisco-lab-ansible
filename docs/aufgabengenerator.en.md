@@ -48,7 +48,7 @@ The student PDF contains network addresses and blank address/routing tables; stu
 
 ### Storage and limits
 
-Unsaved previews are held in bounded process memory and expire when APP restarts. Explicitly save suitable exercises before class. Text and basic formatting are stored with the snapshot; active HTML and foreign attributes are removed. The generator does not distribute Cisco configurations or replace practical validation of the setup.
+Unsaved previews are held only in process memory and expire when APP restarts. Each teacher keeps their 32 most recent previews; previews by colleagues do not evict them. Explicitly save suitable exercises before class. Text and basic formatting are stored with the snapshot; active HTML and foreign attributes are removed. The generator does not distribute Cisco configurations or replace practical validation of the setup.
 
 ## Placeholders
 

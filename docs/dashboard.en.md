@@ -6,7 +6,7 @@ A central web application for a Debian/KDE networking classroom with IServ: enro
 
 The classroom contains 16 student PCs in eight two-person teams and a teacher PC. Each client's internal NIC connects to the school network; a USB Ethernet adapter connects to the separate training network with real switches and routers. The APP console runs as its own service on a separate server.
 
-APP version **2026.11.14**. Both guides retain German navigation and button labels so they match the running application.
+APP version **2026.11.21**. Both guides retain German navigation and button labels so they match the running application.
 
 [Room overview](#overview) · [IServ and roles](#login) · [New installation](#installation) · [Student clients](#clients) · [Bulk actions](#room) · [Teaching view](#classroom) · [Exercise generator](#exercises) · [Repository software](#software) · [Playbook groups](#playbooks) · [Pilot and room rollout](#pilots) · [Maintenance](#maintenance) · [Desktop images](#images) · [Backup and recovery](#backup)
 
@@ -170,9 +170,9 @@ APP schedules evening maintenance Monday to Friday within the 18:00–20:00 Euro
 
 Student maintenance signs users out normally, waits for session completion, checks the package plan and system state, installs updates and reboots after success. Leftover RAM homes are handled only after checks. Failures leave the device running for diagnosis.
 
-The administrator can also start maintenance outside the evening window for one, several or all enrolled student clients. Confirmation covers sign-out, updates and reboot. A manual student run does not trigger a subsequent teacher phase.
+The administrator can also start maintenance outside the evening window for one, several or all enrolled student clients. Confirmation covers sign-out, updates and reboot. A manual student run does not trigger a subsequent teacher phase. Only the administrator can query the preceding live status of the selected clients.
 
-After a successful automatic student phase, the teacher follows through its restricted receiver. Local/graphical sessions defer teacher maintenance; SSH-only sessions do not block it. A device woken specifically for maintenance is shut down after successful completion; a device that was already on remains on.
+After a successful automatic student phase, the teacher follows through its restricted receiver. Local/graphical sessions defer teacher maintenance; SSH-only sessions do not block it. A device woken specifically for maintenance is shut down after successful completion; a device that was already on remains on. Repeated teacher attempts within the evening window keep their own teacher history and create no empty student runs.
 
 History, detailed results and logs distinguish success, failure and deferral. Planned update package names and the shared client report support verification. A completed student result does not imply that the teacher was maintained as well.
 

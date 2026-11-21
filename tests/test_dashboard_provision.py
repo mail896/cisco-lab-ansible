@@ -252,7 +252,7 @@ class QueueTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'nicht für die zentrale Wartung registriert'):
                 self.queue.maintenance_state('LAB-08B')
             with self.assertRaisesRegex(ValueError, 'nicht für die zentrale Wartung registriert'):
-                self.queue.maintenance_start(True, 'LAB-08B')
+                self.queue.maintenance_start(True, ['LAB-08B'])
 
     def test_gui_maintenance_holds_shared_lock_until_controller_finishes(self):
         from maintenance import controller
@@ -268,10 +268,10 @@ class QueueTests(unittest.TestCase):
         with (patch.object(controller, 'targets', return_value={'LAB-01A': {'mac': 'test'}}),
               patch.object(controller, 'execute_locked', side_effect=execute_locked)):
             try:
-                self.assertEqual(self.queue.maintenance_start(True, 'LAB-01A'), {'started': True})
+                self.assertEqual(self.queue.maintenance_start(True, ['LAB-01A']), {'started': True})
                 self.assertTrue(running.wait(3))
                 self.assertTrue(self.deployments.lock.locked())
-                self.assertIsNone(self.queue.maintenance_start(True, 'LAB-01A'))
+                self.assertIsNone(self.queue.maintenance_start(True, ['LAB-01A']))
             finally:
                 release.set()
                 self.until(lambda: not self.deployments.lock.locked())

@@ -402,6 +402,28 @@ class SessionAndRouteTests(unittest.TestCase):
             else:
                 handler.server.provision.maintenance_start.assert_not_called()
 
+    def test_maintenance_live_probe_is_admin_only_and_legacy_default_is_gone(self):
+        sid, _ = self.login()
+        handler = self.handler('/api/maintenance/LAB-01A', sid=sid)
+        handler.do_GET()
+        self.assertEqual(handler._send.call_args.args[0], 403)
+        handler.server.provision.maintenance_state.assert_not_called()
+        sid, session = self.login('admin')
+        handler = self.handler('/api/maintenance', sid=sid)
+        handler.do_GET()
+        self.assertEqual(handler._send.call_args.args[0], 404)
+        handler.server.provision.maintenance_state.assert_not_called()
+        handler = self.handler('/api/maintenance/LAB-01A', sid=sid)
+        handler.server.provision.maintenance_state.return_value = {'available': True}
+        handler.do_GET()
+        self.assertEqual(handler._send.call_args.args[0], 200)
+        handler.server.provision.maintenance_state.assert_called_once_with('LAB-01A')
+        for payload in (dict(confirmed=True), dict(host='LAB-08A', confirmed=True)):
+            handler = self.handler('/api/maintenance/start', 'POST', sid, session['csrf'], payload)
+            handler.do_POST()
+            self.assertEqual(handler._send.call_args.args[0], 404)
+            handler.server.provision.maintenance_start.assert_not_called()
+
     def test_classroom_is_authenticated_and_readable_for_collegium(self):
         handler=self.handler('/api/classroom');handler.server.classroom=Mock();handler.do_GET()
         self.assertEqual(handler._send.call_args.args[0],401);handler.server.classroom.snapshot.assert_not_called()

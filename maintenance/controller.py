@@ -339,7 +339,25 @@ def run(manual=False, selected=None, controller_host='LAB-Teacher'):
     lock=OperationLock(STATE.parent/'operation.lock')
     if not lock.acquire(blocking=False):
         raise RuntimeError('Ein Verwaltungsauftrag läuft. Zentrale Wartung wurde zurückgestellt.')
+    if not enrolled:
+        try:
+            return teacher_retry()
+        finally:
+            lock.release()
     return execute(enrolled, manual, lock)
+
+
+def teacher_retry():
+    """Retry only the Teacher phase; it keeps its own history, so no empty client run is stored."""
+    record = dict(status='finished', results={})
+    try:
+        teacher = teacher_followup(record, False)
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+        teacher = {'status': 'failed', 'reason': str(error)}
+    print(json.dumps({'teacher': teacher}, ensure_ascii=False))
+    if teacher and teacher.get('status') == 'failed':
+        raise SystemExit(1)
+    return teacher
 
 
 def execute(enrolled, manual, lock):

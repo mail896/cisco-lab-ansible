@@ -411,7 +411,7 @@ class Provision:
         from maintenance.controller import targets
         return sorted(targets())
 
-    def maintenance_state(self, host='LAB-08A'):
+    def maintenance_state(self, host):
         from maintenance.controller import ssh, targets
         enrolled = targets()
         if host not in enrolled:
@@ -431,10 +431,10 @@ class Provision:
                             and not self.deployments.lock.locked(),
                 'output':'\n'.join(lines[2:])}
 
-    def maintenance_start(self, confirmed, host='LAB-08A', hosts=None):
+    def maintenance_start(self, confirmed, hosts):
         from maintenance.controller import execute, targets
         enrolled = targets()
-        selected = [host] if hosts is None else hosts
+        selected = hosts
         if (not isinstance(selected, list) or not 1 <= len(selected) <= len(LAB_TARGETS)
                 or any(not isinstance(name, str) for name in selected)
                 or len(set(selected)) != len(selected)):

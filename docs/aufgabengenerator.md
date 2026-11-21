@@ -48,7 +48,7 @@ Das Schüler-PDF enthält die Netzadressen und leere Adress-/Routentabellen; die
 
 ### Speicherung und Grenzen
 
-Ungespeicherte Vorschauen liegen nur im begrenzten Arbeitsspeicher und verfallen beim APP-Neustart. Vor dem Unterricht daher passende Stände ausdrücklich speichern. Texte und einfache Formatierungen bleiben im Aufgabenstand erhalten; aktiver HTML-Inhalt und fremde Attribute werden entfernt. Das Werkzeug verteilt keine Cisco-Konfigurationen und ersetzt keine praktische Prüfung des Aufbaus.
+Ungespeicherte Vorschauen liegen nur im Arbeitsspeicher und verfallen beim APP-Neustart. Jede Lehrkraft behält ihre letzten 32 Vorschauen; Vorschauen anderer Lehrkräfte verdrängen sie nicht. Vor dem Unterricht daher passende Stände ausdrücklich speichern. Texte und einfache Formatierungen bleiben im Aufgabenstand erhalten; aktiver HTML-Inhalt und fremde Attribute werden entfernt. Das Werkzeug verteilt keine Cisco-Konfigurationen und ersetzt keine praktische Prüfung des Aufbaus.
 
 ## Platzhalter
 

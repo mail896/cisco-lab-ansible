@@ -6,7 +6,7 @@ Eine zentrale Weboberfläche für ein Debian-/KDE-Netzwerklabor mit IServ: Gerä
 
 Im Raum stehen 16 Schüler-PCs in acht Zweierteams sowie ein Teacher-PC. Die interne Netzwerkkarte verbindet jeden Client mit dem Schulnetz; ein USB-Ethernet-Adapter führt ausschließlich ins Übungsnetz mit echten Switches und Routern. Die APP-Verwaltung läuft als eigener Dienst auf einem separaten Server.
 
-APP-Version **2026.11.14**. Die Navigation und Schaltflächen heißen in beiden Anleitungen so wie in der deutschen Anwendung.
+APP-Version **2026.11.21**. Die Navigation und Schaltflächen heißen in beiden Anleitungen so wie in der deutschen Anwendung.
 
 [Raumübersicht](#overview) · [IServ und Rollen](#login) · [Neuinstallation](#installation) · [Schülerclients](#clients) · [Sammelaktionen](#room) · [Unterricht](#classroom) · [Aufgabengenerator](#exercises) · [Repo Software](#software) · [Playbook-Gruppen](#playbooks) · [Pilot und Raumverteilung](#pilots) · [Wartung](#maintenance) · [Desktopbilder](#images) · [Sicherung und Wiederherstellung](#backup)
 
@@ -170,9 +170,9 @@ APP plant die Abendwartung Montag bis Freitag im Startfenster 18–20 Uhr Europe
 
 Die Schülerwartung meldet Benutzer regulär ab, wartet auf das Sitzungsende, prüft Paketplanung und Systemzustand, installiert Updates und startet nach Erfolg neu. Zurückgebliebene RAM-Homes werden nur nach Prüfung behandelt. Bei Fehlern bleibt der Rechner zur Diagnose an.
 
-Der Administrator kann Wartung auch außerhalb des Abendfensters für einzelne, mehrere oder alle aufgenommenen Schülerclients starten. Die Bestätigung umfasst Abmeldung, Updates und Neustart. Ein solcher manueller Schülerlauf startet keine nachfolgende Teacher-Phase.
+Der Administrator kann Wartung auch außerhalb des Abendfensters für einzelne, mehrere oder alle aufgenommenen Schülerclients starten. Die Bestätigung umfasst Abmeldung, Updates und Neustart. Ein solcher manueller Schülerlauf startet keine nachfolgende Teacher-Phase. Den vorherigen Live-Status der ausgewählten Clients fragt ebenfalls nur der Administrator ab.
 
-Nach erfolgreicher automatischer Schülerphase folgt der Teacher über seinen begrenzten Empfänger. Lokale/grafische Sitzungen stellen seine Wartung zurück; reine SSH-Sitzungen blockieren sie nicht. Ein für die Wartung eigens gewecktes Gerät wird nach erfolgreichem Abschluss wieder ausgeschaltet; ein zuvor bereits eingeschaltetes bleibt an.
+Nach erfolgreicher automatischer Schülerphase folgt der Teacher über seinen begrenzten Empfänger. Lokale/grafische Sitzungen stellen seine Wartung zurück; reine SSH-Sitzungen blockieren sie nicht. Ein für die Wartung eigens gewecktes Gerät wird nach erfolgreichem Abschluss wieder ausgeschaltet; ein zuvor bereits eingeschaltetes bleibt an. Wiederholte Teacher-Versuche im Abendfenster führen ihren eigenen Teacher-Verlauf und erzeugen keine leeren Schülerläufe.
 
 Verlauf, Detailergebnisse und Protokolle unterscheiden Erfolg, Fehler und Zurückstellung. Paketnamen der Updateplanung und der gemeinsame Clientbericht helfen bei der Kontrolle. Ein abgeschlossenes Schülerergebnis ist keine Zusage, dass auch der Teacher gewartet wurde.
 

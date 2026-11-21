@@ -79,7 +79,7 @@ THEME_PICKER = ('<label class="theme-picker">'+icon('<path d="M20 13.1A8 8 0 0 1
                 '<span class="theme-label">Darstellung</span><select data-theme-select aria-label="Darstellung">'
                 '<option value="system">System</option><option value="light">Hell</option>'
                 '<option value="dark">Dunkel</option></select></label>')
-APP_VERSION = '2026.11.14'
+APP_VERSION = '2026.11.21'
 FOOTER = ('<footer class="app-footer"><span class="footer-credit">2026 - Marc Schulz'
           '<a class="mail-icon" href="mailto:marc.schulz@bbs-einbeck.de" aria-label="E-Mail an Marc Schulz" title="E-Mail an Marc Schulz">' + MAIL_ICON + '</a></span>'
           '<a href="https://github.com/mail896/cisco-lab-ansible" target="_blank" rel="noopener noreferrer">' + GITHUB_ICON + 'GitHub</a>'
@@ -522,10 +522,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, {'hosts': self.server.provision.maintenance_hosts(), 'parallelism': CLIENT_WORKERS})
             except (OSError, ValueError):
                 return self._json(503, {'error': 'Wartungsregistrierung konnte nicht gelesen werden.'})
-        if self.path == '/api/maintenance' or self.path.startswith('/api/maintenance/'):
+        if self.path.startswith('/api/maintenance/'):
+            # Live probe opens SSH and reads the client journal: administrator only.
+            if not self._admin():
+                return
             try:
-                host = self.path.rsplit('/', 1)[-1] if self.path.startswith('/api/maintenance/') else 'LAB-08A'
-                return self._json(200, self.server.provision.maintenance_state(host))
+                return self._json(200, self.server.provision.maintenance_state(self.path.removeprefix('/api/maintenance/')))
             except (OSError,ValueError,subprocess.SubprocessError):
                 return self._json(503, {'error': 'Wartungsstatus konnte nicht geladen werden.'})
         if self.path == '/api/appearance/rollout':
@@ -788,9 +790,7 @@ class Handler(BaseHTTPRequestHandler):
                     run = method(**payload)
                     return self._json(202 if run else 409, run or {'error':'Ein Verwaltungsauftrag läuft.'})
 
-            if self.path == '/api/maintenance/start' and set(payload) in ({'confirmed'}, {'host', 'confirmed'}, {'hosts', 'confirmed'}):
-                if 'host' in payload and not isinstance(payload['host'], str):
-                    raise ValueError('Ungültiger Wartungsclient.')
+            if self.path == '/api/maintenance/start' and set(payload) == {'hosts', 'confirmed'}:
                 run=self.server.provision.maintenance_start(**payload)
                 return self._json(202 if run else 409, run or {'error':'Ein Verwaltungsauftrag läuft.'})
             if self.path == '/api/appearance/rollout/start' and set(payload) in (

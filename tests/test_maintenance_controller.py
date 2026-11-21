@@ -179,6 +179,24 @@ class RegistrationTests(unittest.TestCase):
                 self.assertEqual(marker.read_text().strip(),'b'*32)
                 self.assertEqual(marker.stat().st_mode & 0o777,0o600)
 
+    def test_teacher_only_retry_stores_no_empty_client_run_and_releases_lock(self):
+        from maintenance import teacher_controller
+        with TemporaryDirectory() as temporary, patch.object(controller, 'STATE', Path(temporary)/'maintenance'), \
+             patch.object(controller.socket, 'gethostname', return_value='apps'), \
+             patch.object(controller, 'start_allowed', return_value=True), \
+             patch.object(controller, 'targets', return_value={'LAB-08A': {}}), \
+             patch.object(controller, 'completed_today', return_value={'LAB-08A'}), \
+             patch.object(teacher_controller, 'enabled', return_value=True), \
+             patch.object(teacher_controller, 'today', return_value=False), \
+             patch.object(teacher_controller, 'run', return_value={'status': 'deferred'}) as teacher, \
+             patch('builtins.print'):
+            self.assertEqual(controller.run(False, None, 'apps'), {'status': 'deferred'})
+            teacher.assert_called_once_with()
+            self.assertFalse(list((Path(temporary)/'maintenance').glob('*.json')))
+            lock = controller.OperationLock(Path(temporary)/'operation.lock')
+            self.assertTrue(lock.acquire(blocking=False))
+            lock.release()
+
     def test_finished_client_phase_invalidates_report_before_teacher_work(self):
         with TemporaryDirectory() as temporary, patch.object(controller,'STATE',Path(temporary)/'maintenance'), \
              patch.object(controller.RoomActions,'wake_route'), \
