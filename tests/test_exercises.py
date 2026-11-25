@@ -323,6 +323,14 @@ class OutputTests(unittest.TestCase):
             for device in ('R1','R2','S1','S2'):
                 self.assertEqual(archive.read('Team-01/'+device+'.cfg'),archive.read('Team-01/'+device+'.txt'))
 
+    def test_header_logo_is_decoded_once_at_print_size(self):
+        from dashboard.exercise_outputs import header_logo
+        logo=header_logo()
+        self.assertIs(header_logo(),logo)
+        self.assertLessEqual(max(logo.getSize()),600)
+        pdf(self.task);pdf(self.task)
+        self.assertEqual(header_logo.cache_info().misses,1)
+
     def test_editable_wireshark_texts_follow_level_and_selected_protocol(self):
         from dashboard.exercise_outputs import wireshark, solution_notes
         self.task['text'].update(ws_title='Eigene Analyse',ws_work='<p>Grundauftrag {{filter}}</p>',

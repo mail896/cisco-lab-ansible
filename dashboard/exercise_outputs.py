@@ -7,6 +7,7 @@ import json
 import zipfile
 from pathlib import Path
 import re
+import functools
 import unicodedata
 import threading
 
@@ -199,15 +200,10 @@ def solution_notes(task, variant):
     return '\n'.join(lines) + '\n'
 
 
-def pdf(task, team=None, solution=False):
-    from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_LEFT
-    from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Flowable, KeepTogether
+def pdf_font():
+    """Embed host-supplied DejaVu for German worksheet text; fall back to Helvetica."""
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    # DejaVu is already supplied by the host; embed it for German worksheet text.
     font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
     with FONT_LOCK:
         if 'LAB-DejaVu' not in pdfmetrics.getRegisteredFontNames() and Path(font_path).is_file():
@@ -216,7 +212,25 @@ def pdf(task, team=None, solution=False):
                 pdfmetrics.registerFont(TTFont('LAB-DejaVu'+suffix, str(Path(font_path).parent/filename)))
             pdfmetrics.registerFontFamily('LAB-DejaVu', normal='LAB-DejaVu', bold='LAB-DejaVu-Bold',
                                          italic='LAB-DejaVu-Italic', boldItalic='LAB-DejaVu-BoldItalic')
-    font = 'LAB-DejaVu' if 'LAB-DejaVu' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'
+        mono = Path(font_path).parent/'DejaVuSansMono.ttf'
+        if 'LAB-DejaVuMono' not in pdfmetrics.getRegisteredFontNames() and mono.is_file():
+            pdfmetrics.registerFont(TTFont('LAB-DejaVuMono', str(mono)))
+            pdfmetrics.registerFont(TTFont('LAB-DejaVuMono-Bold', str(mono.parent/'DejaVuSansMono-Bold.ttf')))
+            pdfmetrics.registerFontFamily('LAB-DejaVuMono', normal='LAB-DejaVuMono', bold='LAB-DejaVuMono-Bold',
+                                         italic='LAB-DejaVuMono', boldItalic='LAB-DejaVuMono-Bold')
+    return 'LAB-DejaVu' if 'LAB-DejaVu' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'
+
+
+def pdf_mono():
+    from reportlab.pdfbase import pdfmetrics
+    pdf_font()
+    return 'LAB-DejaVuMono' if 'LAB-DejaVuMono' in pdfmetrics.getRegisteredFontNames() else 'Courier'
+
+
+def pdf_styles(font):
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_LEFT
     styles = getSampleStyleSheet()
     for key in ('Normal', 'Heading1', 'Heading2'):
         styles[key].fontName = font+'-Bold' if key.startswith('Heading') and font=='LAB-DejaVu' else font
@@ -225,6 +239,48 @@ def pdf(task, team=None, solution=False):
     styles['Heading2'].keepWithNext=True
     team_style=ParagraphStyle('LABTeam',parent=styles['Normal'],fontName=font+'-Bold' if font=='LAB-DejaVu' else 'Helvetica-Bold',fontSize=14,leading=18,textColor=colors.HexColor('#246246'),spaceBefore=6,spaceAfter=6)
     small = ParagraphStyle('LABSmall', parent=styles['Normal'], fontSize=7, leading=10, alignment=TA_LEFT)
+    return styles, team_style, small
+
+
+@functools.lru_cache(maxsize=1)
+def header_logo():
+    """Decode the 3021 px logo once at print size (~430 dpi), not for every export."""
+    from PIL import Image
+    from reportlab.lib.utils import ImageReader
+    path = Path(__file__).parent/'assets/bbs-einbeck.png'
+    if not path.is_file():
+        return None
+    with Image.open(path) as image:
+        image.thumbnail((600, 600))
+        reader = ImageReader(image.copy())
+    # Fill the reader's lazy caches now, so parallel exports only read them.
+    reader.getRGBData()
+    reader.getTransparent()
+    return reader
+
+
+def page_frame(task, font):
+    """Header with BBS logo, CISCO-Lab and author on every page; footer with id/page."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    def footer(canvas,doc):
+        canvas.saveState()
+        logo=header_logo()
+        if logo:canvas.drawImage(logo,A4[0]-145,A4[1]-59,width=100,height=28,preserveAspectRatio=True,mask='auto')
+        canvas.setFillColor(colors.HexColor('#243a50'));canvas.setFont(font,12);canvas.drawString(45,A4[1]-39,'CISCO-Lab')
+        canvas.setFont(font,9);canvas.drawString(45,A4[1]-55,'Marc Schulz')
+        canvas.setStrokeColor(colors.HexColor('#cbd7e1'));canvas.line(45,A4[1]-73,A4[0]-45,A4[1]-73)
+        canvas.setFont(font,7);canvas.setFillColor(colors.HexColor('#66788a'));canvas.drawString(45,24,'CISCO-LAB · '+task['id'][:8]);canvas.drawRightString(A4[0]-45,24,'Seite '+str(doc.page))
+        canvas.restoreState()
+    return footer
+
+
+def pdf(task, team=None, solution=False):
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Flowable, KeepTogether
+    font = pdf_font()
+    styles, team_style, small = pdf_styles(font)
     def para(text, style='Normal'):
         return Paragraph(escape(str(text)).replace('\n', '<br/>'), small if style == 'small' else styles[style])
     def rich(text, style='Normal'):
@@ -264,9 +320,9 @@ def pdf(task, team=None, solution=False):
         if task['options']['ipv6'] and plain_text(text['reset_ipv6']):story += [Spacer(1,5),*rich(text['reset_ipv6'],'small')]
         story += [PageBreak(),para('Adress- und Routentabelle','Heading1')]
         data=[[para(v,'small') for v in ('Gerät / Anschluss','IPv4 / Präfix','IPv6 / Präfix')]]
-        for name,device in variant['devices'].items():
+        for device_name,device in variant['devices'].items():
             for row in device['interfaces']:
-                data.append([para(name+'\n'+row['port'],'small')]+[para(row.get(family,'—') if show else ('' if task['options'][family] else '—'),'small') for family in ('ipv4','ipv6')])
+                data.append([para(device_name+'\n'+row['port'],'small')]+[para(row.get(family,'—') if show else ('' if task['options'][family] else '—'),'small') for family in ('ipv4','ipv6')])
         table=Table(data,colWidths=[155,155,185],repeatRows=1)
         table.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#eaf0f5')),('GRID',(0,0),(-1,-1),.4,colors.HexColor('#ccd7df')),('VALIGN',(0,0),(-1,-1),'TOP'),('TOPPADDING',(0,0),(-1,-1),7),('BOTTOMPADDING',(0,0),(-1,-1),7)]));story += [table,Spacer(1,12)]
         data=[[para(v,'small') for v in ('Gerät','Zielnetz','Nächster Router')]]
@@ -288,15 +344,7 @@ def pdf(task, team=None, solution=False):
             block += [Spacer(1,8),answer_table(('Paket / Richtung','Quell- / Ziel-IP','Kennung / Sequenz','Beobachtung'),[100,145,125,125])]
             story.append(KeepTogether(block))
         if solution:story += [para('Diagnose und Erwartung','Heading2'),para(solution_notes(task,variant),'small')]
-    def footer(canvas,doc):
-        canvas.saveState()
-        logo=Path(__file__).parent/'assets/bbs-einbeck.png'
-        if logo.is_file():canvas.drawImage(str(logo),A4[0]-145,A4[1]-59,width=100,height=28,preserveAspectRatio=True,mask='auto')
-        canvas.setFillColor(colors.HexColor('#243a50'));canvas.setFont(font,12);canvas.drawString(45,A4[1]-39,'CISCO-Lab')
-        canvas.setFont(font,9);canvas.drawString(45,A4[1]-55,'Marc Schulz')
-        canvas.setStrokeColor(colors.HexColor('#cbd7e1'));canvas.line(45,A4[1]-73,A4[0]-45,A4[1]-73)
-        canvas.setFont(font,7);canvas.setFillColor(colors.HexColor('#66788a'));canvas.drawString(45,24,'CISCO-LAB · '+task['id'][:8]);canvas.drawRightString(A4[0]-45,24,'Seite '+str(doc.page))
-        canvas.restoreState()
+    footer=page_frame(task,font)
     SimpleDocTemplate(output,pagesize=A4,leftMargin=45,rightMargin=45,topMargin=90,bottomMargin=40,title=task['title'],author='CISCO-LAB').build(story,onFirstPage=footer,onLaterPages=footer)
     return output.getvalue()
 

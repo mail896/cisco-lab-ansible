@@ -1,10 +1,10 @@
-# CISCO-LAB · Exercise generator
+# CISCO-LAB · Network planning & routing
 
 [Deutsch](aufgabengenerator.md) · [Pages](https://mail896.github.io/cisco-lab-ansible/en.html#exercises)
 
-**2026.11.10** · Prepare, edit and export routing exercises
+**2026.11.25** · Prepare, edit and export routing exercises
 
-Unterricht → Aufgabengenerator creates exercises for two LANs, two routers and two switches. The preview, task text, address plan and worked solution belong to the same exercise snapshot. Generating exercises and exporting files does not change any device.
+Unterricht → Netzplanung & Routing (network planning and routing; called “Aufgabengenerator” until 2026.11.24) creates exercises for two LANs, two routers and two switches. The preview, task text, address plan and worked solution belong to the same exercise snapshot. Generating exercises and exporting files does not change any device.
 
 ## Workflow
 
@@ -41,6 +41,14 @@ A template contains text and generation settings, not team names or fixed random
 ### Collection and permissions
 
 All authenticated teachers may generate, read and export exercises. Owners may remove their own templates and exercises; the administrator may manage all entries. Other templates can be copied into owned templates. The collection displays ten entries per page. Bulk deletion requires confirmation of the count; Zurücksetzen only clears the current draft.
+
+### Student access
+
+Accounts with the IServ student role only see their own start page and the two teaching areas. They generate previews, adjust texts and IP versions and download the worksheet PDF and model solution for self-checking. Saving, templates and the shared collection are hidden and blocked on the server; students cannot open teachers' saved exercises. Each student keeps their six most recent previews in a separate pool that never evicts teachers' drafts. Generating, saving and exporting is recorded with the user's name in the administrator's task log (90 days).
+
+![Student access: start page with both teaching areas and a note on hidden functions](media/student-home.jpg)
+
+![Student view of Netzplanung & Routing without saving or collection](media/student-generator.jpg)
 
 ### Student worksheet and worked solution
 

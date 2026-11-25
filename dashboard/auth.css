@@ -17,6 +17,7 @@ p { color: var(--ui-muted, #546579); }
 .access-notes p { font-size: .9rem; margin: 0; }
 .access-dot { position: absolute; top: 8px; left: 0; width: 8px; height: 8px; border-radius: 50%; background: #4b7397; }
 .admin-dot { background: #36885b; }
+.student-dot { background: #b7791f; }
 .login-card { background: var(--ui-surface, white); border: 1px solid var(--ui-border, #dce4ed); border-radius: 20px; padding: clamp(24px, 3.5vw, 40px); box-shadow: 0 14px 50px #17263a09; }
 .login-mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--ui-success-soft, #e4f4e9); color: var(--ui-success, #205f3b); margin-bottom: 24px; }
 .login-mark svg { width: 26px; height: 26px; }

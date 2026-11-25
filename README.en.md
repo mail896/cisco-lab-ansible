@@ -20,7 +20,9 @@ The actual classroom in one shared view. The shared room diagram represents 16 s
 
 ### IServ and roles
 
-One sign-in with explicit permissions. The landing page opens school authentication through “IServ Login”. The designated administrator manages devices, software, maintenance and backups. Members of the staff group Kollegium can read permitted views, execute all bulk actions and use the exercise generator with their own templates.
+One sign-in with explicit permissions. The landing page opens school authentication through “IServ Login”. The designated administrator manages devices, software, maintenance and backups. Members of the staff group Kollegium can read permitted views, execute all bulk actions and use both teaching areas with their own templates. Accounts with the IServ student role get their own start page and generate exercises with model solutions without saving anything; all administration areas stay hidden and blocked for them. APP logs sign-ins as well as generated and exported tasks for the administrator (90 days).
+
+![Student access with start page](docs/media/student-home.jpg)
 
 ### New installation
 
@@ -44,13 +46,21 @@ See USB lab networks live. The teaching view uses the same room diagram as the o
 
 ![Teaching view](docs/media/dashboard-classroom.jpg)
 
-### Exercise generator
+### Network planning & routing (Netzplanung & Routing)
 
 IPv4/IPv6 routing exercises for up to eight teams, editable templates, student PDFs and worked-solution ZIPs. Existing networks survive protocol selection changes; only explicit saving adds a preview to the collection.
 
-[Complete exercise generator guide](docs/aufgabengenerator.en.md)
+[Complete network planning & routing guide](docs/aufgabengenerator.en.md)
 
 ![Exercise settings, protocols and team variants in the running APP](docs/media/exercise-overview.jpg)
+
+### Network troubleshooting (Fehlersuche im Netz)
+
+Network troubleshooting on the Linux command line: simulated faults for addressing, routing, DNS, path & MTU and ports & services at three levels, plus live exploration of the LAB client, a Wireshark capture in the lab network and a Packet Tracer team swap with hidden fault cards. Solutions highlight the evidence lines and explain the technical terms.
+
+[Network troubleshooting guide](docs/linux-diagnose.en.md)
+
+![Fault report and simulated command outputs](docs/media/troubleshooting-overview.jpg)
 
 ![Formatted task text and reusable templates](docs/media/exercise-texts.jpg)
 
@@ -117,4 +127,4 @@ Additional desktop and lab-network images show actual LAB clients; they document
 
 ## Version and contact
 
-Documented APP version: **2026.11.21**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)
+Documented APP version: **2026.11.25**. 2026 - Marc Schulz · [E-Mail](mailto:marc.schulz@bbs-einbeck.de)

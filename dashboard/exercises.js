@@ -38,7 +38,7 @@ async function exerciseOpenTab(name) {
       });
       exerciseEditors.set(area.id,editor);
     }
-  }catch(error){exerciseMessage(error.message+' Du kannst die Texte weiterhin im Textfeld bearbeiten.');}
+  }catch(error){exerciseMessage(error.message+(labStudent?' Sie können die Texte weiterhin im Textfeld bearbeiten.':' Du kannst die Texte weiterhin im Textfeld bearbeiten.'));}
 }
 const exerciseOptionIds = {ipv4:'ipv4',ipv6:'ipv6',level:'level',teams:'teams',sizes:'sizes',
   lan_prefix:'lan-prefix',transfer_prefix:'transfer-prefix',lan_min:'lan-min',lan_max:'lan-max',
@@ -168,7 +168,7 @@ function exerciseRender(team='1') {
   const task=exerciseTask;
   el('exercise-empty').hidden=Boolean(task);el('exercise-result').hidden=!task;el('exercise-device-panel').hidden=!task;
   el('exercise-team-label').hidden=!task||task.variants.length===1;
-  el('exercise-preview-title').textContent=task?task.title:'Dein nächstes Netzwerk';
+  el('exercise-preview-title').textContent=task?task.title:labStudent?'Ihr nächstes Netzwerk':'Dein nächstes Netzwerk';
   if(!task){el('exercise-plan').replaceChildren();return;}
   el('exercise-team').replaceChildren(...task.variants.map(row=>new Option('Team '+row.team,String(row.team))));
   el('exercise-team').value=team;
@@ -210,7 +210,7 @@ el('exercise-form').addEventListener('submit',event=>{
   event.preventDefault();exerciseAction(async()=>{
     exerciseMessage('Aufgabe wird erzeugt …');
     exerciseTask=await request('/api/exercises/preview',{settings:exerciseSettings(),text:exerciseTexts(),team_names:exerciseNames(Number(el('exercise-teams').value))});
-    exerciseRender();exerciseMessage('Ungespeicherte Vorschau. Würfle erneut oder speichere die passende Aufgabe. Die Vorschau verfällt bei einem APP-Neustart.');
+    exerciseRender();exerciseMessage(labStudent?'Neue Übungsaufgabe erzeugt. Laden Sie Aufgaben-PDF und Musterlösung herunter; gespeichert wird nichts.':'Ungespeicherte Vorschau. Würfle erneut oder speichere die passende Aufgabe. Die Vorschau verfällt bei einem APP-Neustart.');
   });
 });
 el('exercise-template').addEventListener('change',()=>{
@@ -291,7 +291,7 @@ for(const id of ['exercise-pdf','exercise-zip','exercise-pdf-all','exercise-zip-
   event.preventDefault();exerciseAction(async()=>{
     await exerciseApplyTexts();
     const link=document.createElement('a');link.href=el(id).href;link.hidden=true;document.body.append(link);link.click();link.remove();
-    exerciseMessage('Export mit den aktuellen Texten. '+(exerciseTask.saved?'Dieser Stand ist gespeichert.':'Die Vorschau ist noch nicht in der Sammlung gespeichert.'));
+    exerciseMessage(labStudent?'Download gestartet.':'Export mit den aktuellen Texten. '+(exerciseTask.saved?'Dieser Stand ist gespeichert.':'Die Vorschau ist noch nicht in der Sammlung gespeichert.'));
   });
 });
 async function exerciseSaveStandard() {

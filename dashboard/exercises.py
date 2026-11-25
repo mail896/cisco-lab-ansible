@@ -13,6 +13,7 @@ import re
 import secrets
 import threading
 import tempfile
+import time
 import uuid
 
 from dashboard.pagination import paginate
@@ -216,9 +217,44 @@ def task_label(row):
 
 DRAFTS_PER_OWNER = 32
 DRAFTS_TOTAL = 512
+# Students practise with unsaved previews only, in their own bounded pool, so a
+# whole class can never evict the drafts of teachers.
+STUDENT_DRAFTS_PER_OWNER = 6
+STUDENT_DRAFTS_TOTAL = 600
+STUDENT_PREVIEWS_PER_MINUTE = 20
+
+
+def student(user):
+    return user.get('role') == 'student'
+
+
+def staff_only(user):
+    if student(user):
+        raise PermissionError('Schüler können Aufgaben erzeugen und exportieren, aber nicht speichern oder Vorlagen ändern.')
 
 
 class Exercises:
+    # Extension points: a second teaching generator reuses the collection,
+    # ownership and preview handling with its own model and texts.
+    default_text = DEFAULT_TEXT
+    default_options = DEFAULT_OPTIONS
+    texts = staticmethod(texts)
+    options = staticmethod(options)
+    generate = staticmethod(generate)
+
+    @staticmethod
+    def label(row):
+        return task_label(row)
+
+    @staticmethod
+    def normalize(cfg):
+        cfg.update(level='plan', addresses='fixed')
+        return cfg
+
+    @staticmethod
+    def summary(row):
+        return dict(networks=[dict(team=v['team'], networks=v['networks']) for v in row['variants']])
+
     def __init__(self, directory):
         self.directory = Path(directory)
         for path in (self.directory, self.directory/'tasks', self.directory/'templates'):
@@ -226,6 +262,8 @@ class Exercises:
         self.lock = threading.RLock()
         # Unsaved previews are bounded and private to their authenticated author.
         self.drafts = OrderedDict()
+        self.student_drafts = OrderedDict()
+        self.student_previews = {}
 
     @staticmethod
     def validate_id(value):
@@ -254,20 +292,27 @@ class Exercises:
     def public(self, row, user):
         result = deepcopy({key: value for key, value in row.items() if key not in ('owner', 'address_pool')})
         result['editable'] = self.editable(row, user)
-        result['text']=texts(row['text'])
+        result['text']=self.texts(row['text'])
         if 'created' in row:
-            result['label']=task_label(row)
+            result['label']=self.label(row)
             result['team_names']=team_names(row.get('team_names'), row['options']['teams'])
         return result
 
     def state(self, user, page=1):
+        if student(user):
+            # No shared collection for students: it holds teachers' tasks with solutions.
+            with self.lock:
+                templates = [self.public(json.loads(p.read_text()), user) for p in (self.directory/'templates').glob('*.json')]
+            templates.sort(key=lambda row: row['title'].casefold())
+            return dict(paginate(dict(runs=[]), page), templates=templates, defaults=self.defaults(),
+                        deletion=dict(count=0, token='', scope='own'))
         with self.lock:
             tasks = [json.loads(p.read_text()) for p in (self.directory/'tasks').glob('*.json')]
             tasks.sort(key=lambda row: (row['created'], row['id']), reverse=True)
             page_data = paginate(dict(runs=tasks), page)
             rows = [dict({key: row[key] for key in ('id', 'title', 'created', 'author', 'options')},
-                         label=task_label(row), editable=self.editable(row, user),
-                         networks=[dict(team=v['team'], networks=v['networks']) for v in row['variants']]) for row in page_data['runs']]
+                         label=self.label(row), editable=self.editable(row, user),
+                         **self.summary(row)) for row in page_data['runs']]
             templates = [self.public(json.loads(p.read_text()), user) for p in (self.directory/'templates').glob('*.json')]
             templates.sort(key=lambda row: row['title'].casefold())
             deletion=self.delete_preview(user, tasks)
@@ -277,14 +322,14 @@ class Exercises:
 
     def defaults(self):
         path = self.directory/'standard.json'
-        row = json.loads(path.read_text()) if path.exists() else dict(text=DEFAULT_TEXT, options=DEFAULT_OPTIONS)
-        return dict(text=texts(row['text']), options=options(row['options']))
+        row = json.loads(path.read_text()) if path.exists() else dict(text=self.default_text, options=self.default_options)
+        return dict(text=self.texts(row['text']), options=self.options(row['options']))
 
     def standard(self, text, settings, user):
+        staff_only(user)
         if user.get('role') != 'admin':
             raise PermissionError('Nur Administratoren dürfen die Standardvorlage ändern.')
-        row = dict(id='standard', text=texts(text), options=options(settings))
-        row['options'].update(level='plan', addresses='fixed')
+        row = dict(id='standard', text=self.texts(text), options=self.normalize(self.options(settings)))
         with self.lock:
             self.write('', row)
         return self.defaults()
@@ -296,11 +341,14 @@ class Exercises:
 
     def lookup(self, identity, user):
         self.validate_id(identity)
-        if identity in self.drafts:
-            row = self.drafts[identity]
+        pool = self.student_drafts if student(user) else self.drafts
+        if identity in pool:
+            row = pool[identity]
             if row['owner'] != principal(user):
                 raise FileNotFoundError(identity)
             return row, False
+        if student(user):
+            raise FileNotFoundError(identity)
         return self.read('tasks', identity), True
 
     def draft_copy(self, row, saved, user):
@@ -310,34 +358,51 @@ class Exercises:
         result.update(owner=principal(user), author=user['name'])
         return result
 
-    def remember(self, row):
-        self.drafts[row['id']] = row
-        self.drafts.move_to_end(row['id'])
+    def remember(self, row, user=None):
+        pupil = student(user or {})
+        drafts = self.student_drafts if pupil else self.drafts
+        per_owner, total = (STUDENT_DRAFTS_PER_OWNER, STUDENT_DRAFTS_TOTAL) if pupil else (DRAFTS_PER_OWNER, DRAFTS_TOTAL)
+        drafts[row['id']] = row
+        drafts.move_to_end(row['id'])
         # Each author keeps their own recent previews; colleagues working in
         # parallel can no longer evict them. The total stays bounded in memory.
-        own = [key for key, draft in self.drafts.items() if draft['owner'] == row['owner']]
-        for key in own[:max(0, len(own) - DRAFTS_PER_OWNER)]:
-            del self.drafts[key]
-        while len(self.drafts) > DRAFTS_TOTAL:
-            self.drafts.popitem(last=False)
+        own = [key for key, draft in drafts.items() if draft['owner'] == row['owner']]
+        for key in own[:max(0, len(own) - per_owner)]:
+            del drafts[key]
+        while len(drafts) > total:
+            drafts.popitem(last=False)
+
+    def throttle(self, user):
+        if not student(user):
+            return
+        now, key = time.monotonic(), principal(user)
+        recent = [stamp for stamp in self.student_previews.get(key, []) if stamp > now - 60]
+        if len(recent) >= STUDENT_PREVIEWS_PER_MINUTE:
+            raise PermissionError('Zu viele neue Vorschauen in kurzer Zeit. Bitte eine Minute warten.')
+        self.student_previews[key] = recent + [now]
+        if len(self.student_previews) > 4 * STUDENT_DRAFTS_TOTAL:
+            for owner in [owner for owner, stamps in self.student_previews.items() if stamps[-1] <= now - 60]:
+                del self.student_previews[owner]
 
     def preview(self, settings, text, user, names=None):
+        with self.lock:
+            self.throttle(user)
         row = self.build(settings, text, user, names)
         with self.lock:
-            self.remember(row)
+            self.remember(row, user)
         return dict(self.public(row, user), saved=False)
 
     def revise(self, identity, text, user, names=None):
-        body = texts(text)
+        body = self.texts(text)
         with self.lock:
             current, saved = self.lookup(identity, user)
             previous_names = team_names(current.get('team_names'), current['options']['teams'])
             names = previous_names if names is None else team_names(names, current['options']['teams'])
-            if texts(current['text']) == body and names == previous_names:
+            if self.texts(current['text']) == body and names == previous_names:
                 return dict(self.public(current, user), saved=saved)
             row = self.draft_copy(current, saved, user)
             row.update(title=body['title'], text=body, team_names=names)
-            self.remember(row)
+            self.remember(row, user)
             return dict(self.public(row, user), saved=False)
 
     def families(self, identity, ipv4, ipv6, text, user, names=None):
@@ -373,10 +438,11 @@ class Exercises:
                         if not ipv6:interface.pop('ipv6', None);interface.pop('link_local', None)
                     device['routes'] = [route for route in device['routes'] if cfg[route['family']]]
             row['options'] = cfg
-            self.remember(row)
+            self.remember(row, user)
             return dict(self.public(row, user), saved=False)
 
     def save(self, identity, text, user, names=None):
+        staff_only(user)
         with self.lock:
             task = self.revise(identity, text, user, names)
             if task['saved']:
@@ -388,22 +454,22 @@ class Exercises:
 
     def create(self, settings, text, user, names=None):
         # Compatibility for callers explicitly creating a saved snapshot.
+        staff_only(user)
         with self.lock:
             task = self.preview(settings, text, user, names)
             return self.save(task['id'], text, user)
 
     def build(self, settings, text, user, names=None):
-        cfg, body = options(settings), texts(text)
-        cfg.update(level='plan',addresses='fixed')
+        cfg, body = self.normalize(self.options(settings)), self.texts(text)
         seed = secrets.token_hex(16)
         row = dict(id=uuid.uuid4().hex, title=body['title'], created=datetime.now(timezone.utc).isoformat(),
                    author=user['name'], owner=principal(user), options=cfg, text=body, seed=seed,
-                   variants=generate(cfg, seed), team_names=team_names(names, cfg['teams']), version=1)
+                   variants=self.generate(cfg, seed), team_names=team_names(names, cfg['teams']), version=1)
         return row
 
     def template(self, identity, text, settings, user):
-        body, cfg = texts(text), options(settings)
-        cfg.update(level='plan',addresses='fixed')
+        staff_only(user)
+        body, cfg = self.texts(text), self.normalize(self.options(settings))
         with self.lock:
             previous = self.read('templates', identity) if identity else None
             if previous and not self.editable(previous, user):
@@ -416,6 +482,7 @@ class Exercises:
             return self.public(row, user)
 
     def delete(self, kind, identity, user):
+        staff_only(user)
         if kind not in ('tasks', 'templates'):
             raise ValueError('Unbekannter Eintrag.')
         with self.lock:
@@ -439,6 +506,7 @@ class Exercises:
         return dict(count=len(ids),token=token,scope='all' if user.get('role')=='admin' else 'own')
 
     def delete_all(self, token, confirmed, user):
+        staff_only(user)
         if confirmed is not True or not isinstance(token,str):raise ValueError('Löschen ausdrücklich bestätigen.')
         with self.lock:
             ids=self.deletable(user)

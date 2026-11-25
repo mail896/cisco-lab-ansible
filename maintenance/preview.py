@@ -20,7 +20,7 @@ PROTECTED_PACKAGES = {
     'desktop-file-utils', 'nmap', 'traceroute', 'net-tools', 'numlockx',
     'kdialog', 'libwbclient0', 'winbind', 'krb5-user', 'cifs-utils',
     'libpam-mount', 'libpam-krb5', 'libpam-winbind', 'libnss-winbind',
-    'policykit-1', 'polkitd',
+    'policykit-1', 'polkitd', 'bind9-dnsutils',
 }
 PROTECTED_PREFIXES = (
     'iserv-', 'samba-', 'veyon-', 'wireshark-', 'libwireshark',

@@ -24,11 +24,15 @@ from dashboard.admission import read_settings, write_private
 
 ISSUER = 'https://school.example.org'
 CALLBACK = 'https://lab-app.example.org/cisco-lab/oidc/callback'
-SCOPES = 'openid profile email iserv:uuid iserv:groups'
+BASE_SCOPES = 'openid profile email iserv:uuid iserv:groups'
+# Roles arrive in their own claim; IServ names the pupil role "student".
+SCOPES = BASE_SCOPES + ' iserv:roles'
 SESSION_COOKIE = '__Secure-cisco-lab-session'
 TRANSACTION_COOKIE = '__Secure-cisco-lab-login'
 TOKEN = re.compile(r'[A-Za-z0-9_-]{43}\Z')
 ACCOUNT = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}\Z')
+# IServ role whose holders may only generate and export practice tasks.
+STUDENT_ROLES = {'student', 'role_student'}
 
 
 class AuthError(ValueError):
@@ -41,7 +45,7 @@ class Denied(AuthError):
     def __init__(self, user=None, message=None):
         self.user = user
         account = (user.get('name') or user['account']) + ' (' + user['account'] + ')' if user else 'dieses IServ-Konto'
-        super().__init__(message or ('Kein Zugang für ' + account + '. CISCO-LAB ist nur für Mitglieder der Gruppe „Kollegium“ freigeschaltet. Bitte mit einem berechtigten Kollegiumskonto anmelden.'), 403)
+        super().__init__(message or ('Kein Zugang für ' + account + '. CISCO-LAB ist nur für das Kollegium und für Konten mit der IServ-Rolle „Schüler“ freigeschaltet. Bitte mit einem berechtigten IServ-Konto anmelden.'), 403)
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -85,6 +89,18 @@ def groups(value):
     return list(value.values()) if all(isinstance(row, dict) for row in value.values()) else []
 
 
+def role_names(value):
+    names = []
+    if isinstance(value, dict) and isinstance(value.get('roles'), list):
+        value = value['roles']
+    for row in groups(value) if isinstance(value, dict) else value if isinstance(value, list) else []:
+        if isinstance(row, str):
+            names.append(row)
+        elif isinstance(row, dict):
+            names.extend(row[key] for key in ('name', 'act', 'id', 'role') if isinstance(row.get(key), str))
+    return [name for name in names if 1 <= len(name) <= 80]
+
+
 def identity(info, settings):
     if not isinstance(info, dict):
         raise Denied()
@@ -102,15 +118,20 @@ def identity(info, settings):
         raise Denied()
     account = account.lower()
     admin = account == settings['admin_account'] and user_uuid == settings['admin_uuid']
-    staff = any(isinstance(group, dict) and any(
-        isinstance(group.get(key), str) and group[key].casefold() == settings['reader_group'].casefold()
+    member = lambda wanted: any(isinstance(group, dict) and any(
+        isinstance(group.get(key), str) and group[key].casefold() == wanted.casefold()
         for key in ('name', 'act', 'id')) for group in groups(info.get('iserv:groups')))
+    staff = member(settings['reader_group'])
     name = info.get('name')
     name = name.strip() if isinstance(name, str) and len(name) <= 200 else account
-    user = dict(account=account, name=name or account, uuid=user_uuid, role='admin' if admin else 'reader')
-    if not admin and not staff:
+    pupil = any(role.casefold() in STUDENT_ROLES for role in role_names(info.get('iserv:roles')))
+    # Kollegium wins over the student role, so a teacher with both keeps staff rights.
+    role = 'admin' if admin else 'reader' if staff else 'student' if pupil else None
+    if role is None:
+        # Role names only (never tokens) help to match IServ's naming.
+        print('LAB-Zugang abgelehnt; IServ-Rollen:', sorted(set(re.sub(r'[^A-Za-z0-9_:-]', '?', n) for n in role_names(info.get('iserv:roles'))))[:10], flush=True)
         raise Denied(dict(account=account, name=name or account, role=None))
-    return user
+    return dict(account=account, name=name or account, uuid=user_uuid, role=role)
 
 
 def configuration(path):
@@ -136,6 +157,7 @@ class Provider:
         self.lock = threading.RLock()
         self.metadata_cache = None
         self.keys_cache = None
+        self.scopes = SCOPES
 
     @staticmethod
     def endpoint(value):
@@ -184,7 +206,7 @@ class Provider:
     def begin(self, transaction):
         data = self.metadata()
         challenge = base64.urlsafe_b64encode(hashlib.sha256(transaction['verifier'].encode()).digest()).decode().rstrip('=')
-        query = dict(client_id=self.settings['client_id'], redirect_uri=CALLBACK, scope=SCOPES,
+        query = dict(client_id=self.settings['client_id'], redirect_uri=CALLBACK, scope=self.scopes,
                      response_type='code', state=transaction['state'], nonce=transaction['nonce'],
                      code_challenge=challenge, code_challenge_method='S256')
         separator = '&' if '?' in data['authorization_endpoint'] else '?'
@@ -243,7 +265,7 @@ class Provider:
             if not same(info.get('sub'), claims['sub']):
                 raise AuthError()
             # An explicitly empty UserInfo group list overrides ID-token groups.
-            for key in ('iserv:groups', 'iserv:uuid', 'preferred_username'):
+            for key in ('iserv:groups', 'iserv:roles', 'iserv:uuid', 'preferred_username'):
                 if key not in info and key in claims:
                     info[key] = claims[key]
             user = identity(info, self.settings)
@@ -270,7 +292,7 @@ class Auth:
         self.directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.provider = provider or Provider(settings, clock=clock)
         self.lock = threading.RLock()
-        self.slots = threading.BoundedSemaphore(4)
+        self.slots = threading.BoundedSemaphore(8)
         self.transactions, self.sessions = {}, {}
         self.login_times = []
         path = directory / 'automation-token.json'
@@ -294,12 +316,13 @@ class Auth:
         with self.lock:
             self.purge()
             self.login_times = [stamp for stamp in self.login_times if stamp > self.clock() - 60]
-            if len(self.login_times) >= 30 or len(self.transactions) >= 100:
+            # A whole class signs in at once; the limit still stops runaway loops.
+            if len(self.login_times) >= 120 or len(self.transactions) >= 300:
                 raise AuthError('Zu viele Anmeldeversuche. Bitte in einer Minute erneut versuchen.', 429)
             self.login_times.append(self.clock())
             if previous:
                 self.transactions.pop(digest(previous), None)
-        if not self.slots.acquire(blocking=False):
+        if not self.slots.acquire(timeout=10):
             raise AuthError('IServ-Anmeldung ist ausgelastet. Bitte gleich erneut versuchen.', 503)
         try:
             tid = secrets.token_urlsafe(32)
@@ -322,15 +345,21 @@ class Auth:
                 or ('iss' in values and values['iss'][0] != ISSUER)):
             raise AuthError('Die Anmeldung ist abgelaufen oder ungültig. Bitte neu beginnen.')
         if values.get('error'):
+            if values['error'][0] == 'invalid_scope' and getattr(self.provider, 'scopes', BASE_SCOPES) != BASE_SCOPES:
+                # The IServ client does not allow role data: keep staff sign-in working.
+                self.provider.scopes = BASE_SCOPES
+                print('IServ lehnt Scope iserv:roles ab; Anmeldung ohne Rollen, Schülerzugang inaktiv.', flush=True)
+                self.audit.append('failed', 'verification_failed')
+                raise AuthError('IServ hat die Rollenabfrage abgelehnt. Bitte die Anmeldung über „IServ Login“ neu starten.')
             if values['error'][0] == 'access_denied':
                 self.audit.append('denied', 'provider_denied')
-                raise Denied(message='IServ hat den Zugang nicht freigegeben oder die Anmeldung wurde abgebrochen. CISCO-LAB ist für Mitglieder des Kollegiums vorgesehen. IServ hat dabei keinen Kontonamen an die LAB-Verwaltung übermittelt.')
+                raise Denied(message='IServ hat den Zugang nicht freigegeben oder die Anmeldung wurde abgebrochen. CISCO-LAB ist für Kollegium und Schüler vorgesehen. IServ hat dabei keinen Kontonamen an die LAB-Verwaltung übermittelt.')
             self.audit.append('failed', 'verification_failed')
             raise AuthError()
         code = values.get('code', [''])[0]
         if not 1 <= len(code) <= 2048 or any(char in code for char in '\r\n\0'):
             raise AuthError()
-        if not self.slots.acquire(blocking=False):
+        if not self.slots.acquire(timeout=10):
             raise AuthError('IServ-Anmeldung ist ausgelastet. Bitte neu beginnen.', 503)
         try:
             session = self.provider.complete(code, tx)
@@ -344,7 +373,7 @@ class Auth:
             self.slots.release()
         with self.lock:
             self.purge()
-            if len(self.sessions) >= 1000:
+            if len(self.sessions) >= 3000:
                 raise AuthError('Anmeldung ist ausgelastet. Bitte später erneut versuchen.', 503)
             self.audit.append('success', 'signed_in', session['identity'])
             if previous_sid:

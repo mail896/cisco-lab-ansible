@@ -131,6 +131,38 @@ nav a[aria-current="page"] svg { opacity: 1; }
 html[data-role="reader"] .reader-notice { display: block; }
 html[data-role="reader"] [data-admin-only] { opacity: .55; }
 html[data-role="reader"] [data-admin-nav] { display: none; }
+.student-notice, [data-student-text], #student-home { display: none; }
+html[data-role="student"] #student-home:not([hidden]) { display: block; }
+html[data-role="student"] #overview { display: none !important; }
+.student-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-bottom: 4px; }
+.student-card { display: flex; flex-direction: column; gap: 6px; padding: 23px 25px; color: inherit; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.student-card:hover, .student-card:focus-visible { border-color: var(--ui-success-border, #c9dfd1); box-shadow: 0 10px 30px #17263a12; }
+.student-card h2 { font-size: 1.35rem; margin: 0; }
+.student-card p:not(.eyebrow) { color: var(--ui-muted, #546579); font-size: .9rem; margin: 4px 0 12px; flex: 1; }
+.student-card .text-link { display: inline-flex; align-items: center; gap: 8px; }
+.student-steps { margin: 10px 0 12px; padding-left: 1.3rem; line-height: 1.6; }
+#student-home .home-grid .panel > p:not(.eyebrow):not(.field-hint), .student-steps { color: var(--ui-muted, #546579); font-size: .9rem; }
+#student-home .home-grid a { color: var(--ui-link, #1c4971); font-weight: 650; }
+main:has(#student-home:not([hidden])) .student-notice { display: none; }
+/* Light tints mixed into the theme surface, so they also work in dark mode. */
+#student-home .tint-green { --tint: #2f9e5b; } #student-home .tint-red { --tint: #c8473f; } #student-home .tint-blue { --tint: #3f7fbf; }
+#student-home :is(.tint-green, .tint-red, .tint-blue) { background: linear-gradient(120deg, color-mix(in srgb, var(--tint) 11%, var(--ui-surface, white)), var(--ui-surface, white) 75%); border-color: color-mix(in srgb, var(--tint) 32%, var(--ui-border, #dce4ed)); }
+#student-home :is(.tint-green, .tint-red, .tint-blue) .eyebrow { color: color-mix(in srgb, var(--tint) 70%, var(--ui-text, #17263a)); }
+#student-home .student-card:is(.tint-green, .tint-red):hover { border-color: color-mix(in srgb, var(--tint) 55%, var(--ui-border, #dce4ed)); }
+html[data-role="student"] .student-notice { display: block; background: var(--ui-surface-soft, #e3edf7); border-left: 3px solid var(--ui-border, #4b7397); padding: 12px; border-radius: 7px; }
+html[data-role="student"] [data-student-text] { display: block; }
+html[data-role="student"] [data-staff-text],
+html[data-role="student"] nav a:not([data-student]),
+html[data-role="student"] nav .nav-group-label:not([data-student]),
+html[data-role="student"] .sidebar-foot,
+html[data-role="student"] .exercise-collection,
+html[data-role="student"] #exercise-save, html[data-role="student"] #cli-save,
+html[data-role="student"] #exercise-template-save, html[data-role="student"] #exercise-template-copy,
+html[data-role="student"] #exercise-template-delete, html[data-role="student"] #exercise-template-remove,
+html[data-role="student"] #exercise-standard-save,
+html[data-role="student"] #cli-template-save, html[data-role="student"] #cli-template-copy,
+html[data-role="student"] #cli-template-delete, html[data-role="student"] #cli-template-remove,
+html[data-role="student"] #cli-standard-save { display: none !important; }
 .app-footer { border-top: 1px solid var(--ui-border, #dce4ed); margin-top: 32px; padding: 20px 0 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: .85rem; color: var(--ui-muted, #546579); }
 .app-footer a { color: var(--ui-link, #1c4971); }
 .app-footer a, .footer-credit { display: inline-flex; align-items: center; gap: 7px; }

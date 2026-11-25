@@ -2,7 +2,11 @@
 
 const el = id => document.getElementById(id);
 const basePath = document.documentElement.dataset.basePath || '';
-const labRole = document.documentElement.dataset.role === 'reader' ? 'reader' : 'admin';
+const labRole = ['reader', 'student'].includes(document.documentElement.dataset.role) ? document.documentElement.dataset.role : 'admin';
+// Students only generate and export practice tasks; the backend enforces the same set.
+const labStudent = labRole === 'student';
+const studentPosts = ['/logout', '/api/exercises/preview', '/api/exercises/families', '/api/exercises/text',
+  '/api/cli-exercises/preview', '/api/cli-exercises/text'];
 const csrfToken = document.querySelector('meta[name="cisco-lab-csrf"]')?.content || '';
 // Backend enforces the same boundary. These annotations keep the read-only GUI
 // consistent even when polling updates a button's disabled state.
@@ -183,9 +187,14 @@ window.addEventListener('pageshow', event => {
 });
 
 async function request(path, payload) {
+  if (payload !== undefined && labStudent && !studentPosts.includes(path)) {
+    throw new Error('Im Schülerzugang lassen sich Aufgaben erzeugen und exportieren, aber nicht speichern.');
+  }
   if (payload !== undefined && labRole === 'reader' && !['/logout', '/api/room/start',
     '/api/exercises/create', '/api/exercises/preview', '/api/exercises/text', '/api/exercises/save', '/api/exercises/families',
-    '/api/exercises/template', '/api/exercises/delete', '/api/exercises/delete-all'].includes(path)) {
+    '/api/exercises/template', '/api/exercises/delete', '/api/exercises/delete-all',
+    '/api/cli-exercises/preview', '/api/cli-exercises/text', '/api/cli-exercises/save',
+    '/api/cli-exercises/template', '/api/cli-exercises/delete', '/api/cli-exercises/delete-all'].includes(path)) {
     throw new Error('Du hast Lesezugriff mit Sammelaktionen. Diese Verwaltungsaktion ist dem Administrator vorbehalten.');
   }
   const response = await fetch(basePath + path, payload === undefined ? {} : {
@@ -200,7 +209,7 @@ async function request(path, payload) {
   }
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'Die Anfrage konnte nicht ausgeführt werden.');
-  if (payload !== undefined && path !== '/logout') loadActivity();
+  if (payload !== undefined && path !== '/logout' && !labStudent) loadActivity();
   return data;
 }
 
@@ -1073,7 +1082,7 @@ async function loadLoginLog() {
     const data = await requestHistory('/api/logins', 'login-log-rows', loadLoginLog);
     if (!data || generation !== loginLogGeneration) return;
     const results = {success: ['Angemeldet', 'good'], denied: ['Abgewiesen', 'warn'], failed: ['Fehlgeschlagen', 'warn']};
-    const reasons = {not_collegium: 'Nicht Mitglied des Kollegiums', provider_denied: 'Von IServ abgewiesen / abgebrochen; kein Name übermittelt',
+    const reasons = {not_collegium: 'Weder Kollegium noch Schülerrolle', provider_denied: 'Von IServ abgewiesen / abgebrochen; kein Name übermittelt',
       verification_failed: 'Anmeldedaten nicht sicher verifiziert', provider_unavailable: 'IServ vorübergehend nicht erreichbar'};
     const date = new Intl.DateTimeFormat('de-DE', {dateStyle:'medium',timeZone:'Europe/Berlin'});
     const clock = new Intl.DateTimeFormat('de-DE', {timeStyle:'medium',timeZone:'Europe/Berlin'});
@@ -1088,7 +1097,7 @@ async function loadLoginLog() {
       person.append(name, account); person.className = 'login-person'; person.dataset.label = 'Name / Konto';
       const outcome = document.createElement('td'); outcome.dataset.label = 'Ergebnis'; outcome.append(badge(...(results[row.outcome] || results.failed)));
       const detail = document.createElement('td'); detail.textContent = row.outcome === 'success'
-        ? row.role === 'admin' ? 'Administrator' : 'Kollegium · Lesezugriff' : reasons[row.reason] || 'Zugang nicht erlaubt';
+        ? ({admin: 'Administrator', student: 'Schüler · Unterricht'}[row.role] || 'Kollegium · Lesezugriff') : reasons[row.reason] || 'Zugang nicht erlaubt';
       detail.dataset.label = 'Rolle / Hinweis'; tr.append(time, person, outcome, detail); return tr;
     }, 'records');
     el('login-log-status').textContent = data.pagination.total + (data.pagination.total === 1 ? ' Anmeldung' : ' Anmeldungen') + ' · neueste zuerst.';
@@ -1100,8 +1109,41 @@ async function loadLoginLog() {
     el('login-log-activity').textContent = 'Nicht verfügbar'; el('login-log-activity').dataset.state = 'error';
   } finally { if (generation === loginLogGeneration) el('login-log-refresh').disabled = false; }
 }
-el('login-log-refresh').addEventListener('click',loadLoginLog);
-if (currentPage === '/anmeldungen') loadLoginLog();
+el('login-log-refresh').addEventListener('click',() => { loadLoginLog(); loadTaskLog(); });
+
+// Who generated, saved or exported which task; admin only, like the sign-ins.
+let taskLogGeneration = 0;
+async function loadTaskLog() {
+  const generation = ++taskLogGeneration;
+  try {
+    const data = await requestHistory('/api/task-log', 'task-log-rows', loadTaskLog);
+    if (!data || generation !== taskLogGeneration) return;
+    const actions = {preview: ['Vorschau erzeugt', 'neutral'], save: ['Gespeichert', 'good'], export_pdf: ['PDF exportiert', 'neutral'], export_zip: ['Lösung exportiert', 'warn']};
+    const generators = {network: 'Netzplanung & Routing', linux: 'Fehlersuche im Netz'};
+    const roles = {admin: 'Administrator', reader: 'Kollegium', student: 'Schüler'};
+    const date = new Intl.DateTimeFormat('de-DE', {dateStyle:'medium',timeZone:'Europe/Berlin'});
+    const clock = new Intl.DateTimeFormat('de-DE', {timeStyle:'medium',timeZone:'Europe/Berlin'});
+    renderHistory('task-log-rows', data, row => {
+      const tr = document.createElement('tr');
+      const time = document.createElement('td'); time.dataset.label = 'Zeitpunkt'; time.className = 'login-time';
+      const stamp = document.createElement('time'); stamp.dateTime = row.time; stamp.textContent = date.format(new Date(row.time));
+      const hour = document.createElement('small'); hour.textContent = clock.format(new Date(row.time)); time.append(stamp, hour);
+      const person = document.createElement('td'); person.className = 'login-person'; person.dataset.label = 'Name / Konto';
+      const name = document.createElement('strong'); name.textContent = row.name || row.account || '—';
+      const account = document.createElement('small'); account.textContent = (row.account || '') + (roles[row.role] ? ' · ' + roles[row.role] : '');
+      person.append(name, account);
+      const action = document.createElement('td'); action.dataset.label = 'Aktion'; action.append(badge(...(actions[row.action] || ['Unbekannt', 'neutral'])));
+      const detail = document.createElement('td'); detail.dataset.label = 'Aufgabe';
+      detail.textContent = (generators[row.generator] || '') + ' · ' + row.detail;
+      tr.append(time, person, action, detail); return tr;
+    }, 'records');
+    el('task-log-status').textContent = data.pagination.total + (data.pagination.total === 1 ? ' Eintrag' : ' Einträge') + ' · neueste zuerst.';
+    el('task-log-empty').hidden = data.pagination.total > 0;
+  } catch (error) {
+    if (generation === taskLogGeneration) el('task-log-status').textContent = error.message;
+  }
+}
+if (currentPage === '/anmeldungen') { loadLoginLog(); loadTaskLog(); }
 
 let appearanceData = null;
 let appearanceLoading = false;
@@ -1371,7 +1413,7 @@ if (currentPage === '/desktopbilder') {
 }
 
 // All room views share the same demand-driven, server-cached reachability probe.
-const presencePage = ['/', '/sammelaktionen', '/repo-software', '/unterricht'].includes(currentPage);
+const presencePage = !labStudent && ['/', '/sammelaktionen', '/repo-software', '/unterricht'].includes(currentPage);
 let presenceData = null;
 let presenceTimer = null;
 let presenceLoading = false;
@@ -1406,4 +1448,4 @@ window.addEventListener('pageshow', event => {
   if (event.persisted && presencePage) loadPresence();
 });
 if (presencePage) loadPresence();
-loadActivity();
+if (!labStudent) loadActivity();

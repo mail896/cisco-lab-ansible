@@ -35,6 +35,9 @@ from dashboard.playbook_groups import PlaybookGroups
 from dashboard.classroom import Classroom
 from dashboard.exercises import Exercises
 from dashboard import exercise_api
+from dashboard.login_audit import TaskAudit
+from dashboard.cli_exercises import CliExercises
+from dashboard import cli_exercise_outputs
 from dashboard.targets import HOSTS
 from dashboard.client_report import Dashboard
 
@@ -53,6 +56,8 @@ ASSETS = {
     '/classroom.js': ('classroom.js', 'text/javascript; charset=utf-8'),
     '/exercises.js': ('exercises.js', 'text/javascript; charset=utf-8'),
     '/exercises.css': ('exercises.css', 'text/css; charset=utf-8'),
+    '/cli_exercises.js': ('cli_exercises.js', 'text/javascript; charset=utf-8'),
+    '/cli_exercises.css': ('cli_exercises.css', 'text/css; charset=utf-8'),
     '/vendor/jodit/jodit.min.js': ('vendor/jodit/jodit.min.js', 'text/javascript; charset=utf-8'),
     '/vendor/jodit/jodit.min.css': ('vendor/jodit/jodit.min.css', 'text/css; charset=utf-8'),
 }
@@ -79,15 +84,31 @@ THEME_PICKER = ('<label class="theme-picker">'+icon('<path d="M20 13.1A8 8 0 0 1
                 '<span class="theme-label">Darstellung</span><select data-theme-select aria-label="Darstellung">'
                 '<option value="system">System</option><option value="light">Hell</option>'
                 '<option value="dark">Dunkel</option></select></label>')
-APP_VERSION = '2026.11.21'
+APP_VERSION = '2026.11.25'
 FOOTER = ('<footer class="app-footer"><span class="footer-credit">2026 - Marc Schulz'
           '<a class="mail-icon" href="mailto:marc.schulz@bbs-einbeck.de" aria-label="E-Mail an Marc Schulz" title="E-Mail an Marc Schulz">' + MAIL_ICON + '</a></span>'
           '<a href="https://github.com/mail896/cisco-lab-ansible" target="_blank" rel="noopener noreferrer">' + GITHUB_ICON + 'GitHub</a>'
           '<a href="https://mail896.github.io/cisco-lab-ansible/" target="_blank" rel="noopener noreferrer">' + PAGES_ICON + 'Pages</a>'
           '<span class="app-version">Version ' + APP_VERSION + '</span></footer>')
 for page in ('/schuelerclients', '/installationsfolge', '/pilotdeploys',
-             '/sammelaktionen', '/backup', '/desktopbilder', '/playbooks', '/wartung', '/anmeldungen', '/repo-software','/unterricht','/aufgaben'):
+             '/sammelaktionen', '/backup', '/desktopbilder', '/playbooks', '/wartung', '/anmeldungen', '/repo-software','/unterricht','/aufgaben','/linux-aufgaben'):
     ASSETS[page] = ASSETS['/']
+
+
+# Students reach their start page and the two generators; other pages lead home.
+STUDENT_PAGES = ('/', '/aufgaben', '/linux-aufgaben')
+STUDENT_API = ('/api/exercises', '/api/cli-exercises')
+
+
+def student_allowed(path):
+    return (path == '/api/session' or path in STUDENT_PAGES
+            or (path in ASSETS and ASSETS[path][0] != 'index.html')
+            or any(path == prefix or path.startswith(prefix + '/') for prefix in STUDENT_API))
+
+
+# Second teaching generator: same handlers and rights, own prefix, store and exports.
+CLI_API = ('/api/cli-exercises', 'cli_exercises', cli_exercise_outputs.view)
+CLI_EXPORTS = (cli_exercise_outputs.pdf, cli_exercise_outputs.solution_zip, cli_exercise_outputs.export_name)
 
 
 def teacher_installer():
@@ -242,13 +263,15 @@ class Handler(BaseHTTPRequestHandler):
                 '<div class="access-notes"><div><span class="access-dot"></span><h2>Für das Kollegium</h2>'
                 '<p>LAB-Status ansehen und Sammelaktionen ausführen.</p></div>'
                 '<div><span class="access-dot admin-dot"></span><h2>Für die Administration</h2>'
-                '<p>Geräte einrichten, Sammelaktionen starten und das LAB verwalten.</p></div></div></section>'
+                '<p>Geräte einrichten, Sammelaktionen starten und das LAB verwalten.</p></div>'
+                '<div><span class="access-dot student-dot"></span><h2>Für Schülerinnen und Schüler</h2>'
+                '<p>Übungen zu Netzplanung &amp; Routing und zur Fehlersuche im Netz selbst erzeugen, mit Musterlösung.</p></div></div></section>'
                 '<section class="login-card" aria-labelledby="login-title"><span class="login-mark">' + LOGIN_ICON + '</span>'
                 '<p class="eyebrow">Geschützter Schulbereich</p><h2 id="login-title">Willkommen im LAB</h2>'
-                '<p>Melde dich mit deinem IServ-Konto der BBS Einbeck an.</p>' + notice +
+                '<p>Anmeldung mit dem IServ-Konto der BBS Einbeck.</p>' + notice +
                 '<a class="button" href="' + base + '/oidc/login">IServ Login' + LOGIN_ICON + '</a>'
-                '<p class="login-hint">Die Anmeldung erfolgt direkt bei IServ. Zugriff haben nur Mitglieder des Kollegiums. '
-                'Andere Konten erhalten keinen Zugang.</p>' + local + '</section></main>' + FOOTER + '</div></body></html>')
+                '<p class="login-hint">Die Anmeldung erfolgt direkt bei IServ. Zugriff haben das Kollegium sowie Schülerinnen und Schüler; '
+                'Schülerkonten sehen den Bereich Unterricht. Andere Konten erhalten keinen Zugang.</p>' + local + '</section></main>' + FOOTER + '</div></body></html>')
         self._send(status, body.encode(), 'text/html; charset=utf-8')
 
     def _auth_error(self, error, *, clear_transaction=False):
@@ -334,7 +357,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
         policy="default-src 'self'; object-src 'none'; frame-ancestors 'none'"
-        if self.path == '/aufgaben':policy+="; style-src 'self' 'unsafe-inline'"
+        if self.path in ('/aufgaben', '/linux-aufgaben'):policy+="; style-src 'self' 'unsafe-inline'"
         self.send_header('Content-Security-Policy', policy)
         for name, value in [*headers, *getattr(self, 'extra_auth_headers', [])]:
             self.send_header(name, value)
@@ -352,7 +375,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self._trusted_request():
             return self._json(403, {'error': 'Nur lokaler Zugriff.'})
         self.history_page = None
-        paged = re.fullmatch(r'(/api/(?:exercises|playbook-groups|software|pilot|room|backup|fresh|logins|maintenance-runs|teacher/runs|appearance/rollout|rollout/state/[a-z-]+))/page/([1-9][0-9]{0,5})', self.path)
+        paged = re.fullmatch(r'(/api/(?:exercises|cli-exercises|playbook-groups|software|pilot|room|backup|fresh|logins|task-log|maintenance-runs|teacher/runs|appearance/rollout|rollout/state/[a-z-]+))/page/([1-9][0-9]{0,5})', self.path)
         if paged:
             self.path, number = paged.groups()
             self.history_page = int(number)
@@ -372,7 +395,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         if not self._authorized():
             return
-        if exercise_api.get(self):
+        if getattr(self, 'identity', {}).get('role') == 'student' and not student_allowed(self.path):
+            if self.path in ASSETS:
+                return self._send(303, b'', 'text/plain; charset=utf-8',
+                                  headers=[('Location', self.server.base_path + STUDENT_PAGES[0])])
+            return self._json(403, {'error': 'Dieser Bereich ist für Schüler nicht freigegeben.'})
+        if exercise_api.get(self) or exercise_api.get(self, *CLI_API, exports=CLI_EXPORTS):
             return
         if self.path == '/api/session':
             user = self.identity
@@ -422,6 +450,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(400,dict(error=str(error)))
             except (OSError,sqlite3.Error):
                 return self._json(503,dict(error='Softwaredaten konnten nicht gelesen werden.'))
+        if self.path == '/api/task-log':
+            if not self._admin():
+                return
+            log = getattr(self.server, 'task_audit', None)
+            if not log:
+                return self._json(404, {'error': 'Aufgabenprotokoll ist hier nicht eingerichtet.'})
+            try:
+                records = log.iter_records() if self.history_page else log.records()
+                return self._json(200, paginate({'records': records, 'retention_days': 90,
+                                                 'limit': PAGE_SIZE if self.history_page else 200}, self.history_page, 'records'))
+            except (OSError, ValueError):
+                return self._json(503, {'error': 'Aufgabenprotokoll konnte nicht sicher gelesen werden.'})
         if self.path in ('/api/logins', '/anmeldungen'):
             if not self._admin():
                 return
@@ -612,7 +652,7 @@ class Handler(BaseHTTPRequestHandler):
                 body = body.replace(b'__CONTROLLER_LABEL__', ('APP-Server' if apps else 'LAB-Teacher').encode())
                 user = getattr(self, 'identity', dict(role='admin', name='Lokaler Admin', source='local'))
                 csrf = self.session['csrf'] if getattr(self, 'session', None) else ''
-                label = user['name'] + (' · Administrator' if user['role'] == 'admin' else ' · Kollegium')
+                label = user['name'] + {'admin': ' · Administrator', 'student': ' · Schüler'}.get(user['role'], ' · Kollegium')
                 action = ('<a class="logout-link" id="auth-logout" href="' + self.server.base_path + '/">Abmelden</a>' if user['source'] == 'oidc' else
                           '<a href="' + self.server.base_path + '/oidc/login">Mit IServ anmelden</a>' if getattr(self.server, 'auth', None) else '')
                 body = body.replace(b'__ROLE__', user['role'].encode())
@@ -632,7 +672,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         if not self._csrf():
             return
-        if exercise_api.post(self):
+        if (getattr(self, 'identity', {}).get('role') == 'student' and self.path != '/logout'
+                and not any(self.path.startswith(prefix + '/') for prefix in STUDENT_API)):
+            return self._json(403, {'error': 'Dieser Bereich ist für Schüler nicht freigegeben.'})
+        if exercise_api.post(self) or exercise_api.post(self, *CLI_API, families=False):
             return
         if self.path == '/logout' and getattr(self, 'session', None):
             self.server.auth.logout(cookie_value(self.headers.get('Cookie', ''), SESSION_COOKIE))
@@ -900,9 +943,11 @@ def main():
             server.provision.playbook_groups = server.playbook_groups
             server.classroom = Classroom()
             server.exercises = Exercises(state_dir / 'exercises')
+            server.cli_exercises = CliExercises(state_dir / 'cli-exercises')
             server.presence = Presence()
             server.password_path = password
             server.auth = auth
+            server.task_audit = TaskAudit(auth.directory / 'task-audit') if auth else None
             server.https_host = args.https_host
             server.base_path = args.base_path
             if args.backup_profile == 'apps' and not (state_dir/'software/catalog.sqlite').is_file():

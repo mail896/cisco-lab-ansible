@@ -1,10 +1,10 @@
-# CISCO-LAB · Aufgabengenerator
+# CISCO-LAB · Netzplanung & Routing
 
 [English](aufgabengenerator.en.md) · [Pages](https://mail896.github.io/cisco-lab-ansible/#exercises)
 
-**2026.11.10** · Routing-Aufgaben vorbereiten, bearbeiten und als PDF ausgeben
+**2026.11.25** · Routing-Aufgaben vorbereiten, bearbeiten und als PDF ausgeben
 
-Unter Unterricht → Aufgabengenerator entstehen Übungen für zwei LANs, zwei Router und zwei Switche. Vorschau, Aufgabentexte, Adressplan und Musterlösung gehören zu demselben Aufgabenstand. Die Erzeugung und die Exporte verändern keine Geräte.
+Unter Unterricht → Netzplanung & Routing (bis 2026.11.24 „Aufgabengenerator“) entstehen Übungen für zwei LANs, zwei Router und zwei Switche. Vorschau, Aufgabentexte, Adressplan und Musterlösung gehören zu demselben Aufgabenstand. Die Erzeugung und die Exporte verändern keine Geräte.
 
 ## Workflow
 
@@ -41,6 +41,14 @@ Eine Vorlage enthält Texte und Erzeugungseinstellungen, keine Teamnamen und kei
 ### Sammlung und Rechte
 
 Alle angemeldeten Lehrkräfte dürfen erzeugen, lesen und exportieren. Eigene Vorlagen und Aufgaben können vom Eigentümer entfernt werden; der Administrator kann alle verwalten. Fremde Vorlagen lassen sich als eigene Kopie übernehmen. Die Sammlung zeigt zehn Einträge pro Seite. Alle Aufgaben löschen verlangt eine Bestätigung mit Anzahl; Zurücksetzen entfernt nur den aktuellen Entwurf.
+
+### Schülerzugang
+
+Konten mit der IServ-Rolle Schüler sehen nur eine eigene Startseite und die beiden Unterrichtsbereiche. Sie erzeugen Vorschauen, passen Texte und IP-Versionen an und laden Aufgaben-PDF und Musterlösung zur Selbstkontrolle herunter. Speichern, Vorlagen und die gemeinsame Sammlung sind für sie ausgeblendet und serverseitig gesperrt; gespeicherte Aufgaben der Lehrkräfte können sie nicht öffnen. Jede Schülerin und jeder Schüler behält die letzten sechs Vorschauen in einem eigenen Speicher, der die Entwürfe der Lehrkräfte nicht verdrängt. Wer Vorschauen erzeugt, speichert oder exportiert, steht mit Namen im Aufgabenprotokoll des Administrators (90 Tage).
+
+![Schülerzugang: Startseite mit beiden Unterrichtsbereichen und Hinweis auf ausgeblendete Funktionen](media/student-home.jpg)
+
+![Schüleransicht von Netzplanung & Routing ohne Speichern und Sammlung](media/student-generator.jpg)
 
 ### Schüler-PDF und Musterlösung
 

@@ -17,7 +17,7 @@ PUBLIC_TREES = {'.github', 'dashboard', 'deployment', 'maintenance', 'network', 
                 'action_plugins', 'library'}
 PUBLIC_ROOTS = {'.gitignore', 'README.md', 'README.en.md', 'baseline-client.py', 'inventory.example.ini'}
 PUBLIC_DOCS = {'dashboard.md', 'dashboard.en.md', 'wartung-vorschau.md', 'wartung-vorschau.en.md',
-               'aufgabengenerator.md', 'aufgabengenerator.en.md',
+               'aufgabengenerator.md', 'aufgabengenerator.en.md', 'linux-diagnose.md', 'linux-diagnose.en.md',
                'index.html', 'en.html', 'site.css', '.nojekyll', 'labornetz.svg', 'labornetz.en.svg'}
 PRIVATE_PARTS = {'.git', '.migration', '.venv', '.checks', 'local-private', '__pycache__',
                  '.ssh', 'backup_data', 'node_modules'}

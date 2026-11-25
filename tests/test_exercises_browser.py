@@ -286,4 +286,46 @@ class ExerciseBrowserTests(unittest.TestCase):
         self.assertEqual(self.store.state(self.user)['pagination']['total'],1)
 
 
+    def test_student_view_shows_only_generators_without_saving_and_in_formal_address(self):
+        self.store.create({},self.store.defaults()['text'],self.user)
+        self.user=dict(role='student',name='Testschülerin',account='schueler.test',source='fixture',uuid='fixture-student')
+        self.role='student'
+        requests=[];self.page.on('request',lambda request:requests.append(urlparse(request.url).path))
+        self.page.goto(BASE+'/aufgaben')
+        expect(self.page.locator('.student-notice')).to_be_visible()
+        expect(self.page.locator('.student-notice')).to_contain_text('Sie können')
+        visible=[link.inner_text().strip() for link in self.page.locator('nav a').all() if link.is_visible()]
+        self.assertEqual(visible,['Übersicht','Netzplanung & Routing','Fehlersuche im Netz'])
+        for selector in ('.exercise-collection','#exercise-save','#exercise-template-copy','.sidebar-foot'):
+            expect(self.page.locator(selector).first).to_be_hidden()
+        expect(self.page.locator('#exercise-empty [data-student-text]')).to_contain_text('Wählen Sie')
+        expect(self.page.locator('#exercise-empty [data-staff-text]')).to_be_hidden()
+        self.page.locator('#exercise-create').click()
+        expect(self.page.locator('#exercise-plan svg')).to_be_visible()
+        expect(self.page.locator('#exercise-message')).to_contain_text('gespeichert wird nichts')
+        expect(self.page.locator('#exercise-zip')).to_be_visible()
+        self.page.locator('#exercise-plan [data-device="R1"]').click()
+        expect(self.page.locator('#exercise-config')).to_contain_text('hostname R1')
+        self.assertFalse([path for path in requests if path.startswith('/cisco-lab/api/') and not path.startswith(('/cisco-lab/api/exercises','/cisco-lab/api/session'))])
+        self.assertEqual(self.store.state(self.user)['runs'],[])
+        self.assertFalse(self.errors,self.errors)
+
+    def test_student_home_explains_generators_and_hidden_areas_without_admin_requests(self):
+        self.role='student'
+        requests=[];self.page.on('request',lambda request:requests.append(urlparse(request.url).path))
+        self.page.goto(BASE+'/')
+        home=self.page.locator('#student-home')
+        expect(home).to_be_visible();expect(self.page.locator('#overview')).to_be_hidden()
+        expect(home).to_contain_text('Üben, wann Sie wollen.')
+        expect(home).to_contain_text('Was hier ausgeblendet ist')
+        expect(home.locator('a[href="https://mail896.github.io/cisco-lab-ansible/"]')).to_be_visible()
+        expect(home.locator('.student-card')).to_have_count(2)
+        self.page.set_viewport_size(dict(width=390,height=844))
+        self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),390)
+        home.locator('.student-card').first.click()
+        expect(self.page).to_have_url(BASE+'/aufgaben')
+        self.assertFalse([path for path in requests if path.startswith('/cisco-lab/api/') and not path.startswith(('/cisco-lab/api/exercises','/cisco-lab/api/session'))])
+        self.assertFalse(self.errors,self.errors)
+
+
 if __name__=='__main__':unittest.main()

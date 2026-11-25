@@ -1,0 +1,103 @@
+/* Linux diagnosis generator: builds on exercises.css and the shared LAB tokens. */
+#cli-exercises .panel { padding:20px; margin:0; min-width:0; }
+#cli-exercises h2 { font-size:1.12rem; margin:0; }
+#cli-exercises .section-heading { margin-bottom:15px; gap:12px; }
+#cli-exercises #cli-message:not(:empty) { margin:0 0 16px; }
+#cli-message { font-size:.76rem; margin:12px 0 0; }
+
+/* Level choice as three compact tiles */
+.cli-levels { display:grid; gap:7px; }
+.cli-levels legend,.cli-checks legend { font-size:.78rem; font-weight:600; margin-bottom:7px; }
+.cli-levels label { position:relative; display:block; cursor:pointer; }
+.cli-levels input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+.cli-levels span { display:grid; gap:2px; padding:9px 11px; border:1px solid var(--ui-border,#ccd6e1); border-radius:9px; background:var(--ui-surface,#fff); transition:border-color .15s, background .15s; }
+.cli-levels strong { font-size:.8rem; }
+.cli-levels small { font-size:.68rem; font-weight:400; color:var(--ui-muted,#64768a); }
+.cli-levels input:checked + span { border-color:var(--ui-success,#2a684b); background:var(--ui-success-soft,#e7f2ed); box-shadow:inset 3px 0 0 var(--ui-success,#2a684b); }
+.cli-levels input:focus-visible + span { outline:2px solid var(--ui-link,#335a77); outline-offset:2px; }
+.cli-checks { display:grid; gap:7px; }
+.cli-checks label { display:flex; align-items:center; gap:7px; font-weight:500; }
+.cli-planned { color:var(--ui-muted,#7b8b9c); }
+.cli-planned span { font-size:.62rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:1px 6px; border-radius:20px; background:var(--ui-surface-soft,#eef2f6); }
+.cli-settings #cli-create { width:100%; padding:11px; }
+
+/* Preview */
+.cli-preview-tools { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.cli-preview-tools label { font-size:.75rem; display:flex; align-items:center; gap:8px; }
+.cli-preview-tools select { font:inherit; padding:6px 8px; border:1px solid var(--ui-border,#ccd6e1); border-radius:7px; }
+#cli-solution-toggle[aria-pressed=true] { background:var(--ui-warning-soft,#fff4dc); border-color:var(--ui-warning-border,#e3c27e); color:var(--ui-text,#24364a); }
+.cli-empty svg { fill:var(--ui-success-soft,#e7f2ed); }
+.cli-ticket { border:1px solid var(--ui-warning-border,#e8c77a); background:var(--ui-warning-soft,#fff7e6); border-radius:10px; padding:12px 15px; margin:10px 0 16px; }
+.cli-ticket-label { margin:0 0 5px; font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ui-warning,#8a5a00); }
+#cli-symptom { margin:0; font-size:.92rem; line-height:1.55; }
+
+.cli-terminals { display:grid; gap:14px; }
+.cli-terminal { margin:0; border-radius:10px; overflow:hidden; background:#0f1923; border:1px solid #23384b; box-shadow:0 1px 3px rgba(16,24,36,.18); }
+.cli-terminal-bar { display:flex; align-items:center; gap:10px; padding:7px 12px; background:#1a2836; color:#9fb3c6; font-size:.7rem; }
+.cli-dots { width:42px; height:10px; flex:none; background:radial-gradient(circle at 5px 5px,#e0675f 4px,transparent 4.5px),radial-gradient(circle at 21px 5px,#e6b450 4px,transparent 4.5px),radial-gradient(circle at 37px 5px,#5fbf77 4px,transparent 4.5px); }
+.cli-terminal-title { font-family:ui-monospace,"DejaVu Sans Mono",monospace; }
+.cli-tag { margin-left:auto; padding:2px 8px; border-radius:20px; background:#2b3f52; color:#d6e2ee; font-size:.64rem; font-weight:600; }
+.cli-tag + .cli-tag { margin-left:0; }
+.cli-terminal pre { margin:0; padding:12px 14px 14px; overflow-x:auto; color:#d7e2ec; font:12px/1.55 ui-monospace,"DejaVu Sans Mono",Menlo,monospace; white-space:pre; }
+.cli-terminal pre:focus-visible { outline:2px solid #6fb2e8; outline-offset:-2px; }
+.cli-prompt-line strong { color:#ffffff; }
+.cli-user { color:#7fd29b; }
+.cli-path { color:#7fb7e6; }
+.cli-line { display:inline-block; min-width:100%; border-radius:3px; }
+.cli-terminal.is-card { border-style:dashed; border-color:#4a6378; }
+.show-solution .cli-terminal.is-noise { opacity:.72; }
+.show-solution .cli-line.is-evidence { background:rgba(240,190,80,.22); color:#ffe3a3; box-shadow:inset 3px 0 0 #f0be50; padding-left:6px; margin-left:-6px; }
+
+/* Solution card */
+.cli-solution { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px 20px; border:1px solid var(--ui-success-border,#bdd6c9); background:var(--ui-success-soft,#eef7f2); border-radius:10px; padding:14px 16px; margin:0 0 16px; }
+.cli-solution h3 { margin:0 0 4px; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; color:var(--ui-success,#246246); }
+.cli-solution p { margin:0; font-size:.82rem; line-height:1.55; }
+.cli-solution-head { grid-column:1/-1; display:flex; gap:8px; flex-wrap:wrap; }
+.cli-code { margin:0; padding:8px 10px; border-radius:7px; background:var(--ui-surface,#fff); font:11.5px/1.55 ui-monospace,"DejaVu Sans Mono",monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+
+.cli-part + .cli-part { margin-top:22px; padding-top:18px; border-top:1px solid var(--ui-border,#e3e8ee); }
+.cli-part-title { margin:0 0 10px; font-size:.95rem; }
+.cli-solution-only { display:none !important; }
+.show-solution .cli-solution-only { display:revert !important; }
+.show-solution .cli-solution.cli-solution-only { display:grid !important; }
+.cli-sub { padding-left:22px; }
+.cli-table-wrap { overflow-x:auto; margin:8px 0 12px; }
+.cli-table { width:100%; border-collapse:collapse; font-size:.78rem; line-height:1.5; margin-top:0; white-space:normal; }
+.cli-table th { text-align:left; font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; color:var(--ui-muted,#64768a); background:var(--ui-surface-soft,#f3f6f9); }
+.cli-table :is(th,td) { padding:7px 9px; border:1px solid var(--ui-border,#dde5ec); vertical-align:top; overflow-wrap:anywhere; }
+.cli-live-table { table-layout:fixed; }
+.cli-live-table th:first-child { width:40px; }
+.cli-live-table th:nth-child(2) { width:52%; }
+.cli-table td p { margin:0 0 4px; }
+.cli-table td small { color:var(--ui-muted,#64768a); }
+.cli-cmd { display:block; margin:4px 0; padding:4px 8px; border-radius:6px; background:#0f1923; color:#d7e2ec; font:11.5px/1.5 ui-monospace,"DejaVu Sans Mono",monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+.show-solution .cli-table .cli-cmd.cli-solution-only { display:block !important; }
+.show-solution .cli-table td:first-child + td > div > .cli-cmd:not(.cli-solution-only) { display:none; }
+.cli-capture { margin-top:14px; }
+.cli-capture h4 { margin:0 0 6px; font-size:.85rem; }
+.cli-capture > p { margin:0 0 10px; font-size:.82rem; }
+.cli-step { border:1px solid var(--ui-border,#dde5ec); border-radius:9px; padding:10px 12px; margin-bottom:10px; font-size:.8rem; }
+.cli-step p { margin:6px 0 0; }
+.cli-expected { color:var(--ui-success,#246246); }
+.cli-faultcard { border-style:dashed; margin-top:14px; }
+.cli-terms { margin-top:18px; }
+.cli-terms .cli-glossary { border-top:0; padding-top:0; }
+.cli-glossary { grid-column:1/-1; border-top:1px solid var(--ui-success-border,#bdd6c9); padding-top:12px; }
+.cli-glossary dl { display:grid; grid-template-columns:minmax(120px,max-content) minmax(0,1fr); gap:7px 16px; margin:6px 0 0; font-size:.8rem; line-height:1.5; }
+.cli-glossary dt { font-weight:700; }
+.cli-glossary dd { margin:0; }
+@media(max-width:600px) { .cli-glossary dl { grid-template-columns:1fr; } .cli-glossary dd { margin-bottom:6px; } }
+.cli-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+.cli-chip { display:inline-block; padding:2px 8px; border-radius:20px; font-size:.66rem; font-weight:600; background:var(--ui-surface-soft,#eef2f6); color:var(--ui-text,#33475b); border:1px solid var(--ui-border,#dbe3eb); }
+.cli-chip-strong { background:var(--ui-success,#2a684b); color:#fff; border-color:transparent; }
+:root[data-theme=dark] .cli-chip-strong { color:#10261b; }
+
+@media(max-width:800px) { .cli-levels { grid-template-columns:1fr; } .cli-terminal pre { font-size:11px; } }
+/* Compact secondary buttons like the surrounding controls; terminals fit typical line lengths. */
+#cli-exercises .pager-button { font-size:.76rem; }
+#cli-exercises #cli-solution-toggle { font-size:.78rem; padding:8px 13px; }
+@media(min-width:801px) { .cli-terminal pre { font-size:11.3px; } }
+.cli-placeholders { font-size:.76rem; color:var(--ui-muted,#64768a); margin-top:18px; line-height:1.6; }
+.cli-placeholders summary { cursor:pointer; color:var(--ui-link,#335a77); }
+.cli-placeholders dl { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:6px 18px; }
+.cli-placeholders dd { margin:0; }

@@ -296,5 +296,5 @@ async function loadOverview() {
   finally { overviewLoading = false; }
 }
 
-if (currentPage === '/') loadOverview();
+if (currentPage === '/' && !labStudent) loadOverview();
 if (currentPage === '/installationsfolge') loadIntake();

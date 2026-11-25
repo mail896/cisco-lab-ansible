@@ -189,6 +189,10 @@ class BrowserWorkflowTests(unittest.TestCase):
             elif path == '/api/logins':
                 data = dict(records=[dict(time='2026-11-08T12:40:00+00:00',account='student.test',name='Testschueler',
                                          outcome='denied',reason='not_collegium',role=None)],retention_days=90,limit=200)
+            elif path == '/api/task-log':
+                data = dict(records=[dict(time='2026-11-25T09:15:00+00:00',generator='linux',action='export_zip',task='c'*32,
+                                         detail='Linux-Netzwerkdiagnose · Team 1',account='student.test',name='Testschueler',role='student')],
+                            retention_days=90,limit=200)
             elif path == '/api/intake/read':
                 self.assertTrue(payload['image_confirmed'])
                 self.assertNotIn('fingerprint', payload)
@@ -304,7 +308,7 @@ class BrowserWorkflowTests(unittest.TestCase):
             elif path == '/api/maintenance-runs': data = dict(runs=[],enrolled=['LAB-08A'],busy=self.maintenance_busy,teacher=dict(configuration=dict(enabled=True),runs=[]))
             elif path == '/api/teacher/runs': data = dict(runs=[])
             else: self.errors.append('Unexpected API: '+path); data = dict(error='Unexpected fixture API')
-            if path in self.histories: data['records' if path == '/api/logins' else 'runs'] = self.histories[path]
+            if path in self.histories: data['records' if path in ('/api/logins','/api/task-log') else 'runs'] = self.histories[path]
             if path == '/api/fresh' and history_page is None:
                 rows=data['runs']
                 data['runs']=[row for row in rows if row['status'] in ('running','queued')] + [
@@ -319,13 +323,13 @@ class BrowserWorkflowTests(unittest.TestCase):
                     data['locations'][target]=dict(path=folder,last=dict(time=last.get('copied_at' if target=='mac' else 'download_ready_at' if target=='download' else 'local_saved_at',last['started'])) if last else None)
             if history_page is not None:
                 from dashboard.pagination import paginate
-                data = paginate(data,history_page,'records' if path == '/api/logins' else 'runs',fresh=path=='/api/fresh')
+                data = paginate(data,history_page,'records' if path in ('/api/logins','/api/task-log') else 'runs',fresh=path=='/api/fresh')
             route.fulfill(status=200, content_type='application/json', body=json.dumps(data)); return
         name = path.lstrip('/')
         from dashboard.server import PUBLIC_THEME_ASSETS,PUBLIC_AUTH_ASSETS
         if path in PUBLIC_THEME_ASSETS:name=PUBLIC_THEME_ASSETS[path][0]
         if path in PUBLIC_AUTH_ASSETS:name=PUBLIC_AUTH_ASSETS[path][0]
-        if path in ('/', '/schuelerclients', '/installationsfolge', '/sammelaktionen', '/playbooks', '/anmeldungen', '/pilotdeploys', '/backup', '/desktopbilder', '/wartung','/repo-software','/unterricht','/aufgaben'): name = 'index.html'
+        if path in ('/', '/schuelerclients', '/installationsfolge', '/sammelaktionen', '/playbooks', '/anmeldungen', '/pilotdeploys', '/backup', '/desktopbilder', '/wartung','/repo-software','/unterricht','/aufgaben','/linux-aufgaben'): name = 'index.html'
         file = ROOT / 'dashboard' / name
         if not file.is_file(): route.fulfill(status=404); return
         if name == 'index.html':
@@ -1199,7 +1203,10 @@ class BrowserWorkflowTests(unittest.TestCase):
         self.page.goto(BASE+'/anmeldungen')
         expect(self.page.locator('#login-log-rows')).to_contain_text('Testschueler')
         expect(self.page.locator('#login-log-rows')).to_contain_text('student.test')
-        expect(self.page.locator('#login-log-rows')).to_contain_text('Nicht Mitglied des Kollegiums')
+        expect(self.page.locator('#login-log-rows')).to_contain_text('Weder Kollegium noch Schülerrolle')
+        expect(self.page.locator('#task-log-rows')).to_contain_text('Testschueler')
+        expect(self.page.locator('#task-log-rows')).to_contain_text('Lösung exportiert')
+        expect(self.page.locator('#task-log-rows')).to_contain_text('Fehlersuche im Netz · Linux-Netzwerkdiagnose · Team 1')
         self.assertFalse(self.errors,self.errors)
 
     def test_all_fresh_active_jobs_stay_visible_and_only_completed_history_is_paged(self):

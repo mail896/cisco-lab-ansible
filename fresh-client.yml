@@ -192,6 +192,7 @@
       ansible.builtin.apt:
         name:
           - acl
+          - bind9-dnsutils
           - desktop-file-utils
           - ethtool
           - firefox-esr

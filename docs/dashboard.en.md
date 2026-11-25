@@ -6,9 +6,9 @@ A central web application for a Debian/KDE networking classroom with IServ: enro
 
 The classroom contains 16 student PCs in eight two-person teams and a teacher PC. Each client's internal NIC connects to the school network; a USB Ethernet adapter connects to the separate training network with real switches and routers. The APP console runs as its own service on a separate server.
 
-APP version **2026.11.21**. Both guides retain German navigation and button labels so they match the running application.
+APP version **2026.11.25**. Both guides retain German navigation and button labels so they match the running application.
 
-[Room overview](#overview) · [IServ and roles](#login) · [New installation](#installation) · [Student clients](#clients) · [Bulk actions](#room) · [Teaching view](#classroom) · [Exercise generator](#exercises) · [Repository software](#software) · [Playbook groups](#playbooks) · [Pilot and room rollout](#pilots) · [Maintenance](#maintenance) · [Desktop images](#images) · [Backup and recovery](#backup)
+[Room overview](#overview) · [IServ and roles](#login) · [New installation](#installation) · [Student clients](#clients) · [Bulk actions](#room) · [Teaching view](#classroom) · [Teaching exercises](#exercises) · [Repository software](#software) · [Playbook groups](#playbooks) · [Pilot and room rollout](#pilots) · [Maintenance](#maintenance) · [Desktop images](#images) · [Backup and recovery](#backup)
 
 <a id="overview"></a>
 
@@ -30,9 +30,11 @@ Summary cards link to relevant pages. The LAB logo reloads the overview. Reachab
 
 **One sign-in with explicit permissions**
 
-The landing page opens school authentication through “IServ Login”. The designated administrator manages devices, software, maintenance and backups. Members of the staff group Kollegium can read permitted views, execute all bulk actions and use the exercise generator with their own templates.
+The landing page opens school authentication through “IServ Login”. The designated administrator manages devices, software, maintenance and backups. Members of the staff group Kollegium can read permitted views, execute all bulk actions and use both teaching areas with their own templates.
 
-Accounts outside the staff group receive a clear rejection. Successful and denied sign-ins are logged with the identity verified by IServ, when available. Only the administrator can view the sign-in log.
+Accounts with the IServ role `student` (OIDC scope `iserv:roles`) receive student access. They see their own start page with an explanation and a link to the project site, plus the two teaching areas “Netzplanung & Routing” (network planning and routing, formerly the exercise generator) and “Fehlersuche im Netz” (network troubleshooting, formerly Linux diagnosis), create their own practice tasks and download the worksheet PDF and model solution for self-checking. Saving, templates, the shared collection and every other area remain reserved for staff; the server enforces this independently of the interface. Student drafts live in a separate, bounded in-memory pool and never evict staff drafts. Accounts that are also staff receive staff rights. If the IServ client rejects the `iserv:roles` scope, the app continues without roles; staff can still sign in and student access stays inactive.
+
+Other accounts receive a clear rejection. Successful and denied sign-ins are logged with the identity verified by IServ, when available. A task log additionally records who generated a new preview, saved a task or exported a PDF or model solution (title, team names and identifier, no task content). Only the administrator can view both logs; each keeps 90 days.
 
 The server enforces permissions. The former local browser login is not offered as a fallback. Light, dark and system appearance can be selected in the header; the browser remembers the preference.
 
@@ -102,13 +104,17 @@ USB and session checks run approximately once a minute while the page is visible
 
 <a id="exercises"></a>
 
-## Exercise generator
+## Network planning & routing and network troubleshooting
 
-Unterricht → Aufgabengenerator creates exercises for two LANs, two routers and two switches. The preview, task text, address plan and worked solution belong to the same exercise snapshot. Generating exercises and exporting files does not change any device.
+Unterricht → Netzplanung & Routing creates exercises for two LANs, two routers and two switches. The preview, task text, address plan and worked solution belong to the same exercise snapshot. Generating exercises and exporting files does not change any device.
 
 IPv4/IPv6 routing exercises for up to eight teams, editable templates, student PDFs and worked-solution ZIPs. Existing networks survive protocol selection changes; only explicit saving adds a preview to the collection.
 
-[Complete exercise generator guide](aufgabengenerator.en.md)
+[Complete network planning & routing guide](aufgabengenerator.en.md)
+
+Unterricht → Fehlersuche im Netz creates network troubleshooting exercises for the Linux command line: [Network troubleshooting guide](linux-diagnose.en.md)
+
+Until version 2026.11.24 these areas were called “Aufgabengenerator” and “Linux-Diagnose”.
 
 ![Exercise settings, protocols and team variants in the running APP](media/exercise-overview.jpg)
 
